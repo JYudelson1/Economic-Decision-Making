@@ -67,13 +67,32 @@ class PredictionModel():
         # Note: this should be implemented in each individual model.
         raise NotImplementedError
 
-    def mean_error_one_subject(self, subject: int, predictions: List[int]) -> float:
+    def mean_error_one_subject_absolute(self, subject: int, predictions: List[int]) -> float:
         """Evaluates the mean error for one subject.
         This error is based on the difference between predicted number of units sold and actual number of units sold.
         Inputs:
             subject: the participant's number in the dataframe.
             predictions: the model's predictions for the number of units to be sold each day by this participant."""
-        # TODO: Make a version with MDev based on proportions? That would be closer to report.docx
+        total_error: float = 0
+        subject_data: pd.DataFrame = self.get_data_one_subject(subject)
+
+        # Iterate through the days and sum the error
+        for day in range(self.num_days):
+            day_error: float = abs(predictions[day] - subject_data['sold'][day])
+            total_error += day_error
+
+        # Find the mean
+        mean_error: float = total_error / self.num_days
+
+        return mean_error
+
+    def mean_error_one_subject_proportion(self, subject: int, predictions: List[int]) -> float:
+        """Evaluates the mean error for one subject.
+        This error is based on the difference between predicted proportion of units sold and actual proportion of units sold.
+        This is more in line with report.docx than mean_error_one_subject_absolute.
+        Inputs:
+            subject: the participant's number in the dataframe.
+            predictions: the model's predictions for the number of units to be sold each day by this participant."""
         d_0: int = 0 # Number of days for which the participant had no goods stored
         total_error: float = 0
         subject_data: pd.DataFrame = self.get_data_one_subject(subject)
@@ -83,7 +102,7 @@ class PredictionModel():
             if subject_data['stored'][day] == 0:
                 d_0 += 1
                 continue
-            day_error: float = abs(predictions[day] - subject_data['sold'][day])
+            day_error: float = abs(predictions[day] - subject_data['sold'][day]) / subject_data['stored'][day]
             total_error += day_error
 
         # Find the mean
@@ -91,10 +110,24 @@ class PredictionModel():
 
         return mean_error
 
-    def finalize_and_mean_error(self) -> float:
+    def finalize_and_mean_error(self, error_type: str = "proportion") -> float:
         """Evaluates the average mean error across all subjects,
-        after setting the predictions in self.data to be the predictions given by the best fit for each subject."""
+        after setting the predictions in self.data to be the predictions given by the best fit for each subject.
+        Inputs:
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional."""
         total_error: float = 0
+
+        # Set correct error function
+        if error_type == "proportion":
+            error_fn = self.mean_error_one_subject_proportion
+        elif error_type == "absolute":
+            error_fn = self.mean_error_one_subject_absolute
+        else:
+            raise ValueError("Error type must be proportional or absolute!")
+
         for subject in range(self.num_subjects):
             # Get the already-determined best fit paramters
             best_fit: Optional[Parameters] = self.best_fits.get(subject)
@@ -106,20 +139,36 @@ class PredictionModel():
             self.data.loc[subject, "prediction"] = predictions
 
             # Get error
-            total_error += self.mean_error_one_subject(subject, predictions)
+            total_error += error_fn(subject, predictions)
 
         return (total_error / self.num_subjects)
 
-    def stupid_fit_one_subject(self, subject: int, precision: float, verbose: bool = False) -> None:
+    def stupid_fit_one_subject(self,
+                                subject: int,
+                                precision: float,
+                                verbose: bool = False,
+                                error_type: str = "proportion") -> None:
         """Performs the stupid fit algorithm for one subject and saves the best fit.
         The stupid fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
         Inputs:
             subject: the participant's number in the dataframe.
             precision: the amount to increment each value when iterating through all possible values.
-            verbose: set to True to get progress bars for the fitting."""
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional."""
 
         lowest_error: float = float('inf')
         best_fit: Optional[Parameters] = None
+
+        # Set correct error function
+        if error_type == "proportion":
+            error_fn = self.mean_error_one_subject_proportion
+        elif error_type == "absolute":
+            error_fn = self.mean_error_one_subject_absolute
+        else:
+            raise ValueError("Error type must be proportional or absolute!")
 
         # Get lists of all possible values for all free params
         valid_parameter_ranges: Dict[str, List[float]] = self.get_valid_param_ranges(precision)
@@ -137,7 +186,7 @@ class PredictionModel():
             predictions: List[int] = self.predict_one_subject(subject, fit_params)
 
             # Get error for the given fit
-            error: float = self.mean_error_one_subject(subject, predictions)
+            error: float = error_fn(subject, predictions)
 
             # Check if it's the best so far:
             if error < lowest_error:
