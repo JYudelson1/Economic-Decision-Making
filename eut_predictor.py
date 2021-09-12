@@ -12,7 +12,9 @@ class EUTModel(PredictionModel):
         self.cutoff_prices = pd.read_csv(f'{DATA_DIR}/prices_cutoff_eut.csv')
 
     def predict_one_subject(self, subject: int, fit: Optional[Parameters] = None) -> List[int]:
-        """Returns the predicted sale amounts."""
+        """Returns the predicted sale amounts.
+            subject: the participant's number in the dataframe.
+        """
         subject_data = self.get_data_one_subject(subject)
 
         # Return the prediction that the subject will sell all units when the price is above the cutoff price

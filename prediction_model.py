@@ -41,7 +41,9 @@ class PredictionModel():
 
     def get_valid_param_ranges(self, precision: float = 0.001) -> Dict[str, List[float]]:
         """Returns a list of all the valid values for each parameter, given the precision.
-        Note that all params ranges are returned, even if the parameter is not free."""
+        Note that all params ranges are returned, even if the parameter is not free.
+        Inputs:
+            precision: the amount to increment each value when iterating through all possible values."""
         valid_parameter_ranges: Dict[str, List[float]] = {
             "a": list(np.arange(0, 1 + precision, precision)),
             "b": list(np.arange(0, 1 + precision, precision)),
@@ -52,17 +54,25 @@ class PredictionModel():
         return valid_parameter_ranges
 
     def get_data_one_subject(self, subject: int) -> pd.DataFrame:
-        """Returns all data corresponding to the given subject"""
+        """Returns all data corresponding to the given subject.
+        Inputs:
+            subject: the participant's number in the dataframe."""
         return self.data.loc[subject]
 
     def predict_one_subject(self, subject: int, fit: Optional[Parameters] = None) -> List[int]:
-        """Returns the predicted sale amounts based on the given fit."""
+        """Returns the predicted sale amounts based on the given fit.
+        Inputs:
+            subject: the participant's number in the dataframe.
+            fit: a Parameters object that contains some values to be used in the prediction."""
         # Note: this should be implemented in each individual model.
         raise NotImplementedError
 
     def mean_error_one_subject(self, subject: int, predictions: List[int]) -> float:
         """Evaluates the mean error for one subject.
-        This error is based on the difference between predicted number of units sold and actual number of units sold."""
+        This error is based on the difference between predicted number of units sold and actual number of units sold.
+        Inputs:
+            subject: the participant's number in the dataframe.
+            predictions: the model's predictions for the number of units to be sold each day by this participant."""
         # TODO: Make a version with MDev based on proportions? That would be closer to report.docx
         d_0: int = 0 # Number of days for which the participant had no goods stored
         total_error: float = 0
@@ -102,7 +112,11 @@ class PredictionModel():
 
     def stupid_fit_one_subject(self, subject: int, precision: float, verbose: bool = False) -> None:
         """Performs the stupid fit algorithm for one subject and saves the best fit.
-        The stupid fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best."""
+        The stupid fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
+        Inputs:
+            subject: the participant's number in the dataframe.
+            precision: the amount to increment each value when iterating through all possible values.
+            verbose: set to True to get progress bars for the fitting."""
 
         lowest_error: float = float('inf')
         best_fit: Optional[Parameters] = None
@@ -133,6 +147,9 @@ class PredictionModel():
         self.best_fits[subject] = best_fit
 
     def stupid_fit(self, precision: float = 0.001, verbose: bool = False) -> None:
-        """Does the stupid fit algorithm for all subjects. Modifies in place."""
+        """Does the stupid fit algorithm for all subjects. Modifies in place.
+        Inputs:
+            precision: the amount to increment each value when iterating through all possible values.
+            verbose: set to True to get progress bars for the fitting."""
         for subject in trange(self.num_subjects, disable=(not verbose)):
             self.stupid_fit_one_subject(subject, precision, verbose)
