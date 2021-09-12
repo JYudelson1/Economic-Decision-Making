@@ -40,7 +40,9 @@ def get_full_data() -> pd.DataFrame:
 
     return participants
 
-# TODO: Add function to get std deviation from error & subjects_num
+def std_dev(error: float, n: int) -> float:
+    # TODO: Implement this
+    raise NotImplementedError
 
 if __name__ == '__main__':
 
