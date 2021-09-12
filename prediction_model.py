@@ -110,7 +110,7 @@ class PredictionModel():
 
         return mean_error
 
-    def finalize_and_mean_error(self, error_type: str = "proportion") -> float:
+    def finalize_and_mean_error(self, error_type: str = "proportional") -> float:
         """Evaluates the average mean error across all subjects,
         after setting the predictions in self.data to be the predictions given by the best fit for each subject.
         Inputs:
@@ -121,7 +121,7 @@ class PredictionModel():
         total_error: float = 0
 
         # Set correct error function
-        if error_type == "proportion":
+        if error_type == "proportional":
             error_fn = self.mean_error_one_subject_proportion
         elif error_type == "absolute":
             error_fn = self.mean_error_one_subject_absolute
@@ -147,7 +147,7 @@ class PredictionModel():
                                 subject: int,
                                 precision: float,
                                 verbose: bool = False,
-                                error_type: str = "proportion") -> None:
+                                error_type: str = "proportional") -> None:
         """Performs the stupid fit algorithm for one subject and saves the best fit.
         The stupid fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
         Inputs:
@@ -163,7 +163,7 @@ class PredictionModel():
         best_fit: Optional[Parameters] = None
 
         # Set correct error function
-        if error_type == "proportion":
+        if error_type == "proportional":
             error_fn = self.mean_error_one_subject_proportion
         elif error_type == "absolute":
             error_fn = self.mean_error_one_subject_absolute
