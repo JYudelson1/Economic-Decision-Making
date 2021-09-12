@@ -39,7 +39,7 @@ class PredictionModel():
         # NOTE: This should be reimplemented for each individual model
         self.free_params: Optional[List[str]] = None
 
-    def get_valid_param_ranges(self, precision: float = 0.01) -> Dict[str, List[float]]:
+    def get_valid_param_ranges(self, precision: float = 0.001) -> Dict[str, List[float]]:
         """Returns a list of all the valid values for each parameter, given the precision.
         Note that all params ranges are returned, even if the parameter is not free."""
         valid_parameter_ranges: Dict[str, List[float]] = {
@@ -132,7 +132,7 @@ class PredictionModel():
 
         self.best_fits[subject] = best_fit
 
-    def stupid_fit(self, precision: float = 0.01, verbose: bool = False) -> None:
+    def stupid_fit(self, precision: float = 0.001, verbose: bool = False) -> None:
         """Does the stupid fit algorithm for all subjects. Modifies in place."""
         for subject in trange(self.num_subjects, disable=(not verbose)):
             self.stupid_fit_one_subject(subject, precision, verbose)
