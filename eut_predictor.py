@@ -1,5 +1,4 @@
 from prediction_model import *
-import numpy as np
 
 class EUTModel(PredictionModel):
     """This model implements the prediciton of Expected Utility Theory"""
