@@ -181,7 +181,18 @@ class PredictionModel():
         all_possible_fits = product(*ranges)
 
         # Iterate through every possible value
-        for fit in tqdm(all_possible_fits, disable=(not verbose), leave=False):
+        iterations = 1
+        for range in ranges:
+            iterations *= len(range)
+        for fit in tqdm(all_possible_fits,
+                        disable=(not verbose),
+                        leave=False,
+                        total=iterations,
+                        desc="Attempting all fits..."):
+            # Skip fits where a > b
+            if fit[0] and fit[1] and fit[0] > fit[1]:
+                continue
+
             # Predict sale amounts based on fit
             fit_params: Parameters = Parameters(*fit)
             predictions: List[int] = self.predict_one_subject(subject, fit_params)
@@ -201,5 +212,5 @@ class PredictionModel():
         Inputs:
             precision: the amount to increment each value when iterating through all possible values.
             verbose: set to True to get progress bars for the fitting."""
-        for subject in trange(self.num_subjects, disable=(not verbose)):
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="Stupid Fit"):
             self.stupid_fit_one_subject(subject, precision, verbose)

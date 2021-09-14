@@ -1,5 +1,6 @@
 import pandas as pd
 from math import ceil
+pd.options.mode.chained_assignment = None  # default='warn'
 
 prices_probabilities = pd.read_csv("data/prices_probabilities.csv")
 
@@ -71,4 +72,4 @@ for row in daily_prices.index:  #Loops through rows in daily_prices. Note that t
             i = i-1 #
         daily_prices['util_of_hold'][row] = util_of_hold #store determined util_of_hold for the day
 
-print(list(daily_prices['cutoff']))
+print(daily_prices)
