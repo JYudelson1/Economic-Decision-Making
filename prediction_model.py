@@ -111,14 +111,15 @@ class PredictionModel():
 
         return mean_error
 
-    def finalize_and_mean_error(self, error_type: str = "proportional") -> float:
+    def finalize_and_mean_error(self, error_type: str = "proportional", verbose: bool = True) -> float:
         """Evaluates the average mean error across all subjects,
         after setting the predictions in self.data to be the predictions given by the best fit for each subject.
         Inputs:
             error_type: should the error be calculated as the absolute difference
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
-                        seems to use proportional."""
+                        seems to use proportional.
+            verbose: uses tqdm progess bar if true"""
         total_error: float = 0
 
         # Set correct error function
@@ -129,7 +130,7 @@ class PredictionModel():
         else:
             raise ValueError("Error type must be proportional or absolute!")
 
-        for subject in range(self.num_subjects):
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="Finalizing each subject"):
             # Get the already-determined best fit paramters
             best_fit: Optional[Parameters] = self.best_fits.get(subject)
 
@@ -137,7 +138,7 @@ class PredictionModel():
             predictions: List[int] = self.predict_one_subject(subject, best_fit)
 
             # Store predictions in self.data
-            self.data.loc[subject]["prediction"] = predictions
+            self.data.loc[subject, "prediction"] = predictions
 
             # Get error
             total_error += error_fn(subject, predictions)
@@ -203,14 +204,14 @@ class PredictionModel():
             # Check if it's the best so far:
             if error < lowest_error:
                 lowest_error = error
-                best_fit = fit
+                best_fit = fit_params
 
         self.best_fits[subject] = best_fit
 
-    def stupid_fit(self, precision: float = 0.001, verbose: bool = False) -> None:
+    def stupid_fit(self, precision: float = 0.001, verbose: bool = False, error_type: str = "proportional") -> None:
         """Does the stupid fit algorithm for all subjects. Modifies in place.
         Inputs:
             precision: the amount to increment each value when iterating through all possible values.
             verbose: set to True to get progress bars for the fitting."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc="Stupid Fit"):
-            self.stupid_fit_one_subject(subject, precision, verbose)
+            self.stupid_fit_one_subject(subject, precision, verbose, error_type=error_type)
