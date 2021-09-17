@@ -137,7 +137,7 @@ class PredictionModel():
             predictions: List[int] = self.predict_one_subject(subject, best_fit)
 
             # Store predictions in self.data
-            self.data.loc[subject, "prediction"] = predictions
+            self.data.loc[subject]["prediction"] = predictions
 
             # Get error
             total_error += error_fn(subject, predictions)
