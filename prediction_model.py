@@ -1,9 +1,4 @@
-import pandas as pd
-import numpy as np
-from typing import Optional, Dict, List, Union, Any
 from utils import *
-from tqdm import tqdm, trange
-from itertools import product
 
 class Parameters():
     """A data class to hold values for free parameters"""
@@ -20,7 +15,25 @@ class Parameters():
         self.tw: int = tw
 
         # Store a list of the free parameters
-        self.free_params: List[str] = [param for param in ("a", "b", "g", "l", "tw") if getattr(self, param) != None]
+        self.free_params: List[str] = [param for param in ("a", "b", "g", "l", "tw")
+                                                    if getattr(self, param) != None]
+
+    def __eq__(self, other):
+        """Check if two Parameter objects store equivalent info"""
+        if not isinstance(other, Parameters):
+            return False
+        for param in ("a", "b", "g", "l", "tw"):
+            if getattr(self, param) != getattr(other, param):
+                return False
+        return True
+
+    def __repr__(self):
+        """String representation of Parameter object"""
+        return f'Parameters(a={self.a},b={self.b},g={self.g},l={self.l},tw={self.tw})'
+
+    def __hash__(self):
+        """Make Parameters hashable, and allow identical params to hash to same locations"""
+        return id(repr(self))
 
 class PredictionModel():
     """A model that uses the experiment data to generate predictions."""
@@ -29,6 +42,7 @@ class PredictionModel():
         """Initilizes the PredictionModel"""
 
         # Some models have free parameters. In that case, they vary from subject to subject
+        # This is a mapping from subjects to Parameter values
         self.best_fits: Dict[int, Optional[Parameters]] = {}
 
         # Get experiment data
@@ -39,20 +53,6 @@ class PredictionModel():
         # Set free paramaters based on model type
         # NOTE: This should be reimplemented for each individual model
         self.free_params: Optional[List[str]] = None
-
-    def get_valid_param_ranges(self, precision: float = 0.001) -> Dict[str, List[float]]:
-        """Returns a list of all the valid values for each parameter, given the precision.
-        Note that all params ranges are returned, even if the parameter is not free.
-        Inputs:
-            precision: the amount to increment each value when iterating through all possible values."""
-        valid_parameter_ranges: Dict[str, List[float]] = {
-            "a": list(np.arange(0, 1 + precision, precision)),
-            "b": list(np.arange(0, 1 + precision, precision)),
-            "g": list(np.arange(0, 1 + precision, precision)),
-            "l": list(np.arange(1, 3.5 + precision, precision)),
-            "tw": list(np.arange(0, self.num_days + 1, 1))
-        }
-        return valid_parameter_ranges
 
     def get_data_one_subject(self, subject: int) -> pd.DataFrame:
         """Returns all data corresponding to the given subject.
@@ -145,6 +145,16 @@ class PredictionModel():
 
         return (total_error / self.num_subjects)
 
+    def load_cutoffs(self, filename: str) -> pd.DataFrame:
+        """Loads i' cutoff values from a .csv file
+        Inputs:
+            filename: the name of the save file"""
+        cutoff_prices = pd.read_csv(filename)
+        # for subject in range(self.num_subjects):
+        #     for day in range(self.num_days):
+        #         self.data.loc[subject, "cutoff"][day] = cutoff_prices.loc[subject][day]
+        return cutoff_prices
+
     def stupid_fit_one_subject(self,
                                 subject: int,
                                 precision: float,
@@ -173,7 +183,7 @@ class PredictionModel():
             raise ValueError("Error type must be proportional or absolute!")
 
         # Get lists of all possible values for all free params
-        valid_parameter_ranges: Dict[str, List[float]] = self.get_valid_param_ranges(precision)
+        valid_parameter_ranges: Dict[str, List[float]] = get_valid_param_ranges(precision)
 
         # Remove data on non-free params:
         ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params else [None] for param in ("a", "b", "g", "l", "tw") ]
@@ -214,4 +224,4 @@ class PredictionModel():
             precision: the amount to increment each value when iterating through all possible values.
             verbose: set to True to get progress bars for the fitting."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc="Stupid Fit"):
-            self.stupid_fit_one_subject(subject, precision, verbose, error_type=error_type)
+            self.stupid_fit_one_subject(subject, precision, verbose, error_type)

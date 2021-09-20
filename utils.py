@@ -1,6 +1,17 @@
+## Imports
+
 import pandas as pd
+import numpy as np
+from typing import Optional, Dict, List, Union, Any
+from tqdm import tqdm, trange
+from itertools import product
+from functools import lru_cache
+
+## Constants
 
 DATA_DIR = "data"
+CACHE_SIZE = None
+NUM_DAYS = 68
 
 def get_full_data() -> pd.DataFrame:
     """
@@ -43,6 +54,31 @@ def get_full_data() -> pd.DataFrame:
 def std_dev(error: float, n: int) -> float:
     # TODO: Implement this
     raise NotImplementedError
+
+def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
+    """Returns a list of all the valid values for each parameter, given the precision.
+    Note that all params ranges are returned, even if the parameter is not free.
+    Inputs:
+        precision: the amount to increment each value when iterating through all possible values."""
+    valid_parameter_ranges: Dict[str, List[float]] = {
+        "a": list(np.arange(0, 1 + precision, precision)),
+        "b": list(np.arange(0, 1 + precision, precision)),
+        "g": list(np.arange(0, 1 + precision, precision)),
+        "l": list(np.arange(1, 3.5 + precision, precision)),
+        "tw": list(np.arange(0, NUM_DAYS, 1))
+    }
+    return valid_parameter_ranges
+
+# Get probabilities of each price
+prices_probabilities: pd.DataFrame = pd.read_csv(f'{DATA_DIR}/prices_probabilities.csv')
+
+@lru_cache(maxsize=CACHE_SIZE)
+def p(price: int) -> float:
+    """Gets the probability of a given price occuring.
+    NOTE: This uses the normalized integer price, i.e. $1.5 -> 15
+    Inputs:
+        price: price as an int"""
+    return prices_probabilities.loc[price - 1]["probability"]
 
 if __name__ == '__main__':
 
