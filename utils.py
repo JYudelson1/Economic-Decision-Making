@@ -2,10 +2,12 @@
 
 import pandas as pd
 import numpy as np
+from scipy.optimize import minimize, Bounds, basinhopping
 from typing import Optional, Dict, List, Union, Any, Tuple, Generator, Callable
 from tqdm import tqdm, trange
 from itertools import product
 from functools import lru_cache
+from warnings import catch_warnings, simplefilter
 
 ## Constants
 
