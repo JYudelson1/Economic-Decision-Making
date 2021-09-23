@@ -104,12 +104,7 @@ class PredictionModel():
         errors: List[float] = []
 
         # Set correct error function
-        if error_type == "proportional":
-            error_fn = self.mean_error_one_subject_proportion
-        elif error_type == "absolute":
-            error_fn = self.mean_error_one_subject_absolute
-        else:
-            raise ValueError("Error type must be proportional or absolute!")
+        error_fn = self.get_error_fn(error_type)
 
         # Get errors for each subject
         for subject in trange(self.num_subjects, disable=(not verbose), desc="All Errors"):
@@ -293,6 +288,9 @@ class PredictionModel():
                                  desc="Checking neighbors"):
                 # Get fit as parameter
                 neighbor_fit = Parameters(*neighbor)
+                # If fit uses a and b, a must be less than b
+                if neighbor_fit.a and neighbor_fit.b and neighbor_fit.a > neighbor_fit.b:
+                    continue
                 # Get predictions and errors for each neighbor
                 predictions = self.predict_one_subject(subject, neighbor_fit)
                 neighbor_error: float = error_fn(subject, predictions)
@@ -369,8 +367,8 @@ class PredictionModel():
             current = bfs_queue.pop(0)
             current_error = visited[current]
 
-            # Use itertools.product to get a list of all naighbors
-            all_neighbors = get_all_neighbors(current, precision)
+            # Use itertools.product to get a list of all neighbors
+            all_neighbors = list(get_all_neighbors(current, precision))
 
             # Iterate through each neighbor
             for neighbor in tqdm(all_neighbors,
@@ -380,6 +378,9 @@ class PredictionModel():
 
                 # Get fit as parameter
                 neighbor_fit = Parameters(*neighbor)
+                # If fit uses a and b, a must be less than b
+                if neighbor_fit.a and neighbor_fit.b and neighbor_fit.a > neighbor_fit.b:
+                    continue
                 # Skip visited nodes
                 if visited.get(neighbor_fit):
                     continue
@@ -410,5 +411,136 @@ class PredictionModel():
                         the difference in proportion of goods sold. report.docx
                         seems to use proportional.
             start_fit: the first parameters to use when traversing the search space."""
-        for subject in trange(self.num_subjects, disable=(not verbose), desc="Greedy Fit"):
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="BFS Fit"):
             self.bfs_fit_one_subject(subject, precision, verbose, error_type, start_fit)
+
+    def error_fn_target(self, subject: int, params: np.array, error_type: str) -> float:
+        """A wrapper around the error functions that works with np arrays.
+        Allows scipy.optimize to minimize the value of the function directly.
+        Inouts:
+            subject: the participant's number in the dataframe.
+            params: the parameters to be evaluated as a fit.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            """
+        error_fn = self.get_error_fn(error_type)
+        fit = Parameters(*list(params))
+        predictions = self.predict_one_subject(subject, fit)
+        error: float = error_fn(subject, predictions)
+        return error
+
+    def minimize_fit_one_subject(self, subject: int, guess: Parameters, error_type: str, method: str) -> None:
+        """Uses scipy.optimize.minimize to minimize the error function.
+        Modifies in place.
+        Inputs:
+            subject: the participant's number in the dataframe.
+            guess: starting parameters
+            error_type: absolute or proportional
+            method: optimization method. Can be ‘Nelder-Mead’, ‘L-BFGS-B’,
+                                                ‘TNC’, ‘SLSQP’, or ‘trust-constr’"""
+
+        # Initialize the bounds for each parameter
+        guess_copy = guess.deepcopy()
+        lower_bounds = [0.0, 0.0, 0.0, 1.0, 1]
+        upper_bounds = [1.0, 1.0, 1.0, 3.5, 68]
+        for i, param in enumerate(['a', 'b', 'g', 'l', 'tw']):
+            if getattr(guess_copy, param):
+                continue
+            upper_bounds[i] = lower_bounds[i]
+            setattr(guess_copy, param, lower_bounds[i])
+        bounds = Bounds(lower_bounds, upper_bounds)
+        # Convert the initial parameter set to a numpy array
+        np_guess = np.array(guess_copy.tuplify())
+        # Create the target fn
+        target: Callable[np.array, float] = lambda g: self.error_fn_target(subject, g, error_type)
+
+        # Run the minimization function!
+        #hess = lambda x: np.zeros((5, 5))
+        with catch_warnings():
+            simplefilter('ignore')
+            result = minimize(target,
+                              np_guess,
+                              method=method,
+                              #hess=hess,
+                              bounds=bounds)
+        result_params = Parameters(*list(result.x))
+        # Remove all dummy values from the result, keep only free params
+        for param in ['a', 'b', 'g', 'l', 'tw']:
+            if param in guess.free_params:
+                continue
+            setattr(result_params, param, None)
+        result_params.free_params = guess.free_params
+
+        # Save result
+        self.best_fits[subject] = result_params
+
+    def minimize_fit(self, start_fit: Parameters, verbose: bool = False, error_type: str = "proportional", method='trust-constr') -> None:
+        """Does fit optimization algorithm for all subjects. Modifies in place.
+        Outsources the minimization to scipy.optimize.minimize.
+        Inputs:
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            start_fit: the first parameters to use when traversing the search space.
+            method: optimization method. Can be ‘Nelder-Mead’, ‘L-BFGS-B’,
+                                                ‘TNC’, ‘SLSQP’, or ‘trust-constr’"""
+        for subject in trange(self.num_subjects, disable=(not verbose), desc=f'{method} Fit'):
+            self.minimize_fit_one_subject(subject, start_fit, error_type, method)
+
+    def simulated_annealing_fit_one_subject(self, subject: int, guess: Parameters, error_type: str) -> None:
+        """Uses scipy.optimize.anneal to minimize the error function.
+        Modifies in place.
+        Inputs:
+            subject: the participant's number in the dataframe.
+            guess: starting parameters
+            error_type: absolute or proportional
+            """
+
+        # Initialize the bounds for each parameter
+        guess_copy = guess.deepcopy()
+        lower_bounds = [0.0, 0.0, 0.0, 1.0, 1]
+        upper_bounds = [1.0, 1.0, 1.0, 3.5, 68]
+        for i, param in enumerate(['a', 'b', 'g', 'l', 'tw']):
+            if getattr(guess_copy, param):
+                continue
+            upper_bounds[i] = lower_bounds[i]
+            setattr(guess_copy, param, lower_bounds[i])
+        bounds = Bounds(lower_bounds, upper_bounds)
+        minimizer_kwargs = { "method": "L-BFGS-B","bounds":bounds }
+        # Convert the initial parameter set to a numpy array
+        np_guess = np.array(guess_copy.tuplify())
+        # Create the target fn
+        target: Callable[np.array, float] = lambda g: self.error_fn_target(subject, g, error_type)
+
+        # Run the minimization function!
+        result = basinhopping(target,
+                          np_guess,
+                          minimizer_kwargs=minimizer_kwargs,
+                          niter=10)
+        result_params = Parameters(*list(result.x))
+        # Remove all dummy values from the result, keep only free params
+        for param in ['a', 'b', 'g', 'l', 'tw']:
+            if param in guess.free_params:
+                continue
+            setattr(result_params, param, None)
+        result_params.free_params = guess.free_params
+
+        # Save result
+        self.best_fits[subject] = result_params
+
+    def simulated_annealing_fit(self, start_fit: Parameters, verbose: bool = False, error_type: str = "proportional") -> None:
+        """Does simulated annealing algorithm for all subjects. Modifies in place.
+        Outsources the minimization to scipy.optimize.anneal.
+        Inputs:
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            start_fit: the first parameters to use when traversing the search space."""
+        for subject in trange(self.num_subjects, disable=(not verbose), desc=f'Basinhopping Fit'):
+            self.simulated_annealing_fit_one_subject(subject, start_fit, error_type)
