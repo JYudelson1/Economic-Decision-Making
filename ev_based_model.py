@@ -104,7 +104,7 @@ class EVModel(PredictionModel):
         cutoffs_tuple: Tuple[int, ...] = tuple(cutoffs)
 
         # Iterate through each day, backwards:
-        for day in trange(self.num_days, leave=False, desc="Predicting..."):
+        for day in trange(self.num_days, leave=False, desc="Predicting...", disable=True):
             # Get stored amount, since sell amount must be less than stored
 
             stored: int = int(subject_data.loc[str(day)]["stored"])
