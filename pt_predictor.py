@@ -115,7 +115,9 @@ class PTModel(EVModel):
 
         return ev
 
-if __name__ == '__main__':
+def main() -> None:
+    # model name (to save to data dir)
+    version = "bfs_0-05_923_abs"
 
     # Error type can be "absolute" or "proportional"
     error_type = "absolute"
@@ -123,9 +125,13 @@ if __name__ == '__main__':
     # Initialize model
     model = PTModel()
 
-    # Run bfs fitting
+    # Run fitting
     start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
-    model.bfs_fit(verbose=True, precision=0.1, error_type=error_type, start_fit=start_fit)
+    #model.minimize_fit(start_fit=start_fit, verbose=True, error_type=error_type, method="Nelder-Mead")
+    model.bfs_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
+    #model.stupid_fit(precision=0.2, verbose=True, error_type=error_type)
+    #model.greedy_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
+    #model.simulated_annealing_fit(start_fit=start_fit, verbose=True, error_type=error_type)
 
     # Finalizes predictions
     # Note: error_type = 'absolute' means that the model will use absolute differences
@@ -143,6 +149,10 @@ if __name__ == '__main__':
     print(model.data)
 
     # Saves best cutoff data
-    model.save_cutoffs(f'{DATA_DIR}/prices_cutoff_pt.csv')
-    with open(f'{DATA_DIR}/pt_all_data.pkl', "wb") as f:
-        pkl.dump(model.data, f)
+    #model.save_cutoffs(f'{DATA_DIR}/prices_cutoff_{version}.csv')
+    with open(f'{DATA_DIR}/pt_{version}.pkl', "wb") as f:
+        pkl.dump(model, f)
+
+if __name__ == '__main__':
+
+    main()
