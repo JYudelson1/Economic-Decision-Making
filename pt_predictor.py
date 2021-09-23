@@ -124,7 +124,8 @@ if __name__ == '__main__':
     model = PTModel()
 
     # Run stupid fitting
-    model.stupid_fit(verbose=True, precision=0.1, error_type=error_type)
+    start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
+    model.bfs_fit(verbose=True, precision=0.1, error_type=error_type, start_fit=start_fit)
 
     # Finalizes predictions
     # Note: error_type = 'absolute' means that the model will use absolute differences
@@ -134,9 +135,11 @@ if __name__ == '__main__':
     #       the usage of absolute difference.
 
     mean_error = model.finalize_and_mean_error(error_type=error_type)
+    std_deviation = model.std_dev_of_error(error_type=error_type)
 
     # Prints
     print(f'mean_error = {mean_error}')
+    print(f'std_dev = {std_deviation}')
     print(model.data)
 
     # Saves best cutoff data

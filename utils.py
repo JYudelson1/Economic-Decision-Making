@@ -2,7 +2,7 @@
 
 import pandas as pd
 import numpy as np
-from typing import Optional, Dict, List, Union, Any, Tuple
+from typing import Optional, Dict, List, Union, Any, Tuple, Generator, Callable
 from tqdm import tqdm, trange
 from itertools import product
 from functools import lru_cache
@@ -12,6 +12,53 @@ from functools import lru_cache
 DATA_DIR = "data"
 CACHE_SIZE = None
 NUM_DAYS = 68
+
+## Utility Classes
+
+class Parameters():
+    """A data class to hold values for free parameters"""
+
+    def __init__(self, a = None,
+                        b = None,
+                        g = None,
+                        l = None,
+                        tw = None):
+        self.a: float = a
+        self.b: float = b
+        self.g: float = g
+        self.l: float = l
+        self.tw: int = tw
+
+        # Store a list of the free parameters
+        self.free_params: List[str] = [param for param in ("a", "b", "g", "l", "tw")
+                                                    if getattr(self, param) != None]
+
+    def __eq__(self, other):
+        """Check if two Parameter objects store equivalent info"""
+        if not isinstance(other, Parameters):
+            return False
+        for param in ("a", "b", "g", "l", "tw"):
+            if getattr(self, param) != getattr(other, param):
+                return False
+        return True
+
+    def __repr__(self):
+        """String representation of Parameter object"""
+        return f'Parameters(a={self.a},b={self.b},g={self.g},l={self.l},tw={self.tw})'
+
+    def __hash__(self):
+        """Make Parameters hashable, and allow identical params to hash to same locations"""
+        return (self.a, self.b, self.g, self.l, self.tw).__hash__()
+
+    def tuplify(self):
+        """Return all info as a tuple"""
+        return (self.a, self.b, self.g, self.l, self.tw)
+
+    def deepcopy(self):
+        """Returns a deepcopied Parameters object with the same values as self"""
+        return Parameters(*self.tuplify())
+
+## Utility functions
 
 def get_full_data() -> pd.DataFrame:
     """
@@ -51,10 +98,6 @@ def get_full_data() -> pd.DataFrame:
 
     return participants
 
-def std_dev(error: float, n: int) -> float:
-    # TODO: Implement this
-    raise NotImplementedError
-
 def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
     """Returns a list of all the valid values for each parameter, given the precision.
     Note that all params ranges are returned, even if the parameter is not free.
@@ -68,6 +111,48 @@ def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
         "tw": list(np.arange(0, NUM_DAYS, 1))
     }
     return valid_parameter_ranges
+
+def get_all_neighbors(current: Parameters, precision: float) -> Any:
+    """Given a Parameters object, returns all the neighbors within precision of it.
+    NOTE: precision has no effect on TW, for which the neighbor will always be one above or below.
+    NOTE: this returns a generator object from itertools.product, NOT a list!
+    NOTE: this always includes the current node as well.
+    Inputs:
+        current: the Parameters object whose neighbors should be returned.
+        precision: the amount to increment each value when traversing the search space"""
+
+    ranges : List[List[Union[float, int]]] = []
+    params: List[str] = current.free_params
+
+    for param in ["a", "b", "g"]:
+        if param in params:
+            current_val = getattr(current, param)
+            range: List[float] = [current_val]
+            if current_val - precision >= 0.0:
+                range.append(current_val - precision)
+            if current_val + precision <= 1.0:
+                range.append(current_val + precision)
+            ranges.append(range)
+
+    if "l" in params:
+        current_val = current.l
+        range = [current_val]
+        if current_val - precision >= 1:
+            range.append(current_val - precision)
+        if current_val + precision <=3.5:
+            range.append(current_val + precision)
+        ranges.append(range)
+
+    if "tw" in params:
+        current_val = current.tw
+        range = [current_val]
+        if current_val - 1 >= 0:
+            range.append(current_val - 1)
+        if current_val + 1 <= NUM_DAYS - 1:
+            range.append(current_val + 1)
+        ranges.append(range)
+
+    return product(*ranges)
 
 # Get probabilities of each price
 prices_probabilities: pd.DataFrame = pd.read_csv(f'{DATA_DIR}/prices_probabilities.csv')

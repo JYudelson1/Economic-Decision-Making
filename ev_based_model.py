@@ -21,7 +21,7 @@ class EVModel(PredictionModel):
             fit: the Parameters used to calculate the cutoff values. """
         cutoffs: List[int] = [1]
         iter = range(1, self.num_days)
-        for i in tqdm(iter, desc=f'Cutoffs', leave=False):
+        for i in tqdm(iter, desc=f'Cutoffs', leave=False, disable=True):
             price: int = cutoffs[i - 1] # price has to be at least the last cutoff value
             ev: float = self.expected_value(i, price, 1, fit, tuple(cutoffs))
             while (ev <= 0):
@@ -101,7 +101,7 @@ class EVModel(PredictionModel):
 
         # Turn cutoffs into a tuple
         # This is to make it hashable and cacheable, and therefore save compute time
-        cutoffs_tuple: Tuple[int] = tuple(cutoffs)
+        cutoffs_tuple: Tuple[int, ...] = tuple(cutoffs)
 
         # Iterate through each day, backwards:
         for day in trange(self.num_days, leave=False, desc="Predicting..."):
