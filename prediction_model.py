@@ -370,7 +370,7 @@ class PredictionModel():
             current_error = visited[current]
 
             # Use itertools.product to get a list of all naighbors
-            all_neighbors = list(get_all_neighbors(current, precision))
+            all_neighbors = get_all_neighbors(current, precision)
 
             # Iterate through each neighbor
             for neighbor in tqdm(all_neighbors,
@@ -378,11 +378,11 @@ class PredictionModel():
                                  leave=False,
                                  desc=f'({len(bfs_queue)} neighbors left / {len(visited)} visited)'):
 
-                # Skip visited nodes
-                if visited.get(neighbor):
-                    continue
                 # Get fit as parameter
                 neighbor_fit = Parameters(*neighbor)
+                # Skip visited nodes
+                if visited.get(neighbor_fit):
+                    continue
                 # Get predictions and errors for each neighbor
                 predictions = self.predict_one_subject(subject, neighbor_fit)
                 neighbor_error: float = error_fn(subject, predictions)
