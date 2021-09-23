@@ -1,40 +1,5 @@
 from utils import *
 
-class Parameters():
-    """A data class to hold values for free parameters"""
-
-    def __init__(self, a = None,
-                        b = None,
-                        g = None,
-                        l = None,
-                        tw = None):
-        self.a: float = a
-        self.b: float = b
-        self.g: float = g
-        self.l: float = l
-        self.tw: int = tw
-
-        # Store a list of the free parameters
-        self.free_params: List[str] = [param for param in ("a", "b", "g", "l", "tw")
-                                                    if getattr(self, param) != None]
-
-    def __eq__(self, other):
-        """Check if two Parameter objects store equivalent info"""
-        if not isinstance(other, Parameters):
-            return False
-        for param in ("a", "b", "g", "l", "tw"):
-            if getattr(self, param) != getattr(other, param):
-                return False
-        return True
-
-    def __repr__(self):
-        """String representation of Parameter object"""
-        return f'Parameters(a={self.a},b={self.b},g={self.g},l={self.l},tw={self.tw})'
-
-    def __hash__(self):
-        """Make Parameters hashable, and allow identical params to hash to same locations"""
-        return id(repr(self))
-
 class PredictionModel():
     """A model that uses the experiment data to generate predictions."""
 
@@ -110,6 +75,22 @@ class PredictionModel():
         mean_error: float = total_error / (self.num_days - d_0)
 
         return mean_error
+
+    def get_error_fn(self, error_type: str) -> Callable[[int, List[int]], float]:
+        """Returns the right error function based on the string input.
+        Inputs:
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional."""
+        if error_type == "proportional":
+            error_fn = self.mean_error_one_subject_proportion
+        elif error_type == "absolute":
+            error_fn = self.mean_error_one_subject_absolute
+        else:
+            raise ValueError("Error type must be proportional or absolute!")
+
+        return error_fn
 
     def mean_error_all_subjects(self, error_type: str = "proportional", verbose: bool = True, save_predictions: bool = False) -> List[float]:
         """Evaluates the average mean error across all subjects.
@@ -208,12 +189,7 @@ class PredictionModel():
         best_fit: Optional[Parameters] = None
 
         # Set correct error function
-        if error_type == "proportional":
-            error_fn = self.mean_error_one_subject_proportion
-        elif error_type == "absolute":
-            error_fn = self.mean_error_one_subject_absolute
-        else:
-            raise ValueError("Error type must be proportional or absolute!")
+        error_fn = self.get_error_fn(error_type)
 
         # Get lists of all possible values for all free params
         valid_parameter_ranges: Dict[str, List[float]] = get_valid_param_ranges(precision)
@@ -255,6 +231,184 @@ class PredictionModel():
         """Does the stupid fit algorithm for all subjects. Modifies in place.
         Inputs:
             precision: the amount to increment each value when iterating through all possible values.
-            verbose: set to True to get progress bars for the fitting."""
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc="Stupid Fit"):
             self.stupid_fit_one_subject(subject, precision, verbose, error_type)
+
+    def greedy_fit_one_subject(self,
+                               subject: int,
+                               precision: float = 0.001,
+                               verbose: bool = False,
+                               error_type: str = "proportional",
+                               start_fit: Optional[Parameters] = None) -> None:
+        """Performs the greedy fit algorithm for one subject and saves the best fit.
+        The greedy fit algorithm consists of starting at one spot in the search space
+            and exclusively tarveling to the neighbor with the lowest error.
+        NOTE: Greedy fit doesn't guarantee optimality, but it's fast. Don't use for actual values,
+            but useful as a sanity check.
+        NOTE: modifies self.best_fits in place
+        Inputs:
+            subject: the participant's number in the dataframe.
+            precision: the amount to increment each value when traversing the search space.
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            start_fit: the first parameters to use when traversing the search space.
+            """
+
+        # Ensure greedy fit has a starting point
+        if not start_fit:
+            raise ValueError("Greedy fit needs a starting parameter set!")
+
+        # Set correct error function
+        error_fn = self.get_error_fn(error_type)
+
+        # Get starting error
+        self.best_fits[subject] = start_fit
+        predictions: List[int] = self.predict_one_subject(subject, start_fit)
+        current_error: float = error_fn(subject, predictions)
+
+        # Changed flag will tell us whether the best fit changes over the course
+        # of one iteration of the algorithm. If it doesn't change, then we are
+        # in a local minimum and can stop.
+        changed: bool = True
+
+        while changed:
+            # Reset changed flag
+            changed = False
+
+            # Use itertools.product to get a list of all naighbors
+            all_neighbors = list(get_all_neighbors(self.best_fits[subject], precision))
+
+            # Iterate through each neighbor
+            for neighbor in tqdm(all_neighbors,
+                                 disable=(not verbose),
+                                 leave=False,
+                                 desc="Checking neighbors"):
+                # Get fit as parameter
+                neighbor_fit = Parameters(*neighbor)
+                # Get predictions and errors for each neighbor
+                predictions = self.predict_one_subject(subject, neighbor_fit)
+                neighbor_error: float = error_fn(subject, predictions)
+                # Save best neighbor error
+                if neighbor_error < current_error:
+                    # Local save and modify in plave
+                    current_error = neighbor_error
+                    self.best_fits[subject] = neighbor_fit
+                    # Set changed flag
+                    changed = True
+
+    def greedy_fit(self,
+                   precision: float = 0.001,
+                   verbose: bool = False,
+                   error_type: str = "proportional",
+                   start_fit: Optional[Parameters] = None) -> None:
+        """Does the greedy fit algorithm for all subjects. Modifies in place.
+        Inputs:
+            precision: the amount to increment each value when traversing the search space.
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            start_fit: the first parameters to use when traversing the search space."""
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="Greedy Fit"):
+            self.greedy_fit_one_subject(subject, precision, verbose, error_type, start_fit)
+
+    def bfs_fit_one_subject(self,
+                               subject: int,
+                               precision: float = 0.001,
+                               verbose: bool = False,
+                               error_type: str = "proportional",
+                               start_fit: Optional[Parameters] = None) -> None:
+        """Performs the BFS fit algorithm for one subject and saves the best fit.
+        The BFS fit algorithm consists of starting at one spot in the search space
+            and eaxploring each neighbor with a lower error..
+        NOTE: bfs fit doesn't guarantee optimality.
+        NOTE: modifies self.best_fits in place
+        Inputs:
+            subject: the participant's number in the dataframe.
+            precision: the amount to increment each value when traversing the search space.
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            start_fit: the first parameters to use when traversing the search space.
+            """
+
+        # Ensure greedy fit has a starting point
+        if not start_fit:
+            raise ValueError("BFS fit needs a starting parameter set!")
+
+        # Set correct error function
+        error_fn = self.get_error_fn(error_type)
+
+        # Get initial error
+        predictions: List[int] = self.predict_one_subject(subject, start_fit)
+        start_error: float = error_fn(subject, predictions)
+        self.best_fits[subject] = start_fit
+
+        # Keep track of every visited node, along with its error
+        visited: Dict[Parameters, float] = {start_fit: start_error}
+
+        # Keep track of the current best candidate
+        lowest_error: float = start_error
+
+        # BFS keeps track of a queue of nodes to be visited, and checks the oldest first
+        bfs_queue: List[Parameters] = [start_fit]
+
+        while len(bfs_queue) != 0:
+            # Get current node
+            current = bfs_queue.pop(0)
+            current_error = visited[current]
+
+            # Use itertools.product to get a list of all naighbors
+            all_neighbors = list(get_all_neighbors(current, precision))
+
+            # Iterate through each neighbor
+            for neighbor in tqdm(all_neighbors,
+                                 disable=(not verbose),
+                                 leave=False,
+                                 desc=f'({len(bfs_queue)} neighbors left / {len(visited)} visited)'):
+
+                # Skip visited nodes
+                if visited.get(neighbor):
+                    continue
+                # Get fit as parameter
+                neighbor_fit = Parameters(*neighbor)
+                # Get predictions and errors for each neighbor
+                predictions = self.predict_one_subject(subject, neighbor_fit)
+                neighbor_error: float = error_fn(subject, predictions)
+                # Mark down neighbor error
+                visited[neighbor_fit] = neighbor_error
+                # Add promising neighbors to queue
+                if neighbor_error < current_error:
+                    bfs_queue.append(neighbor_fit)
+                # Save best fit
+                if neighbor_error < lowest_error:
+                    lowest_error = neighbor_error
+                    self.best_fits[subject] = neighbor
+
+    def bfs_fit(self,
+                   precision: float = 0.001,
+                   verbose: bool = False,
+                   error_type: str = "proportional",
+                   start_fit: Optional[Parameters] = None) -> None:
+        """Does the BFS fit algorithm for all subjects. Modifies in place.
+        Inputs:
+            precision: the amount to increment each value when traversing the search space.
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            start_fit: the first parameters to use when traversing the search space."""
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="Greedy Fit"):
+            self.bfs_fit_one_subject(subject, precision, verbose, error_type, start_fit)
