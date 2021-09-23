@@ -394,7 +394,7 @@ class PredictionModel():
                 # Save best fit
                 if neighbor_error < lowest_error:
                     lowest_error = neighbor_error
-                    self.best_fits[subject] = neighbor
+                    self.best_fits[subject] = neighbor_fit
 
     def bfs_fit(self,
                    precision: float = 0.001,
