@@ -123,7 +123,7 @@ if __name__ == '__main__':
     # Initialize model
     model = PTModel()
 
-    # Run stupid fitting
+    # Run bfs fitting
     start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
     model.bfs_fit(verbose=True, precision=0.1, error_type=error_type, start_fit=start_fit)
 
@@ -144,5 +144,5 @@ if __name__ == '__main__':
 
     # Saves best cutoff data
     model.save_cutoffs(f'{DATA_DIR}/prices_cutoff_pt.csv')
-    with open("pt_all_data.pkl", "wb") as f:
+    with open(f'{DATA_DIR}/pt_all_data.pkl', "wb") as f:
         pkl.dump(model.data, f)
