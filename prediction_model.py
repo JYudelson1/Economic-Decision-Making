@@ -111,16 +111,16 @@ class PredictionModel():
 
         return mean_error
 
-    def finalize_and_mean_error(self, error_type: str = "proportional", verbose: bool = True) -> float:
-        """Evaluates the average mean error across all subjects,
-        after setting the predictions in self.data to be the predictions given by the best fit for each subject.
+    def mean_error_all_subjects(self, error_type: str = "proportional", verbose: bool = True, save_predictions: bool = False) -> List[float]:
+        """Evaluates the average mean error across all subjects.
         Inputs:
             error_type: should the error be calculated as the absolute difference
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
                         seems to use proportional.
-            verbose: uses tqdm progess bar if true"""
-        total_error: float = 0
+            verbose: uses tqdm progess bar if true
+            save_predictions: if true, saves each prediction to self.data"""
+        errors: List[float] = []
 
         # Set correct error function
         if error_type == "proportional":
@@ -130,20 +130,53 @@ class PredictionModel():
         else:
             raise ValueError("Error type must be proportional or absolute!")
 
-        for subject in trange(self.num_subjects, disable=(not verbose), desc="Finalizing each subject"):
+        # Get errors for each subject
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="All Errors"):
             # Get the already-determined best fit paramters
             best_fit: Optional[Parameters] = self.best_fits.get(subject)
 
             # Predict sale amounts based on best_fit
             predictions: List[int] = self.predict_one_subject(subject, best_fit)
 
-            # Store predictions in self.data
-            self.data.loc[subject, "prediction"] = predictions
-
             # Get error
-            total_error += error_fn(subject, predictions)
+            error: float = error_fn(subject, predictions)
+            errors.append(error)
 
-        return (total_error / self.num_subjects)
+            # If save_predictions, store predictions in self.data
+            if save_predictions:
+                self.data.loc[subject, "prediction"] = predictions
+
+        return errors
+
+    def finalize_and_mean_error(self, error_type: str = "proportional", verbose: bool = True) -> float:
+        """ Returns the mean of all mean errors.
+        Additionally, saves all best fit predictions to self.data
+        Inputs:
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            verbose: uses tqdm progess bar if true"""
+
+        all_errors: List[float] = self.mean_error_all_subjects(error_type,
+                                                               verbose,
+                                                               save_predictions=True)
+
+        return np.mean(all_errors)
+
+    def std_dev_of_error(self, error_type: str = "proportional", verbose: bool = True) -> float:
+        """ Returns the standard deviation of all mean errors.
+        Inputs:
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            verbose: uses tqdm progess bar if true"""
+
+        all_errors: List[float] = self.mean_error_all_subjects(error_type,
+                                                               verbose)
+
+        return np.std(all_errors)
 
     def load_cutoffs(self, filename: str) -> pd.DataFrame:
         """Loads i' cutoff values from a .csv file

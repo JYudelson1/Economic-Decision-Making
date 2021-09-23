@@ -23,10 +23,10 @@ class EVModel(PredictionModel):
         iter = range(1, self.num_days)
         for i in tqdm(iter, desc=f'Cutoffs', leave=False):
             price: int = cutoffs[i - 1] # price has to be at least the last cutoff value
-            ev: float = self.expected_value(i, price, 1, fit, cutoffs)
+            ev: float = self.expected_value(i, price, 1, fit, tuple(cutoffs))
             while (ev <= 0):
                 price += 1
-                ev = self.expected_value(i, price, 1, fit, cutoffs)
+                ev = self.expected_value(i, price, 1, fit, tuple(cutoffs))
             cutoffs.append(price)
         return cutoffs
 
@@ -42,8 +42,8 @@ class EVModel(PredictionModel):
                 df.loc[subject, d] = cutoffs[d]
         df.to_csv(filename, index=False)
 
-    # @lru_cache(maxsize=CACHE_SIZE)
-    def expected_value(self, day: int, price: int, amount: int, fit: Parameters, cutoffs: List[int]) -> float:
+    @lru_cache(maxsize=CACHE_SIZE)
+    def expected_value(self, day: int, price: int, amount: int, fit: Parameters, cutoffs: Tuple[int]) -> float:
         """This should return the expected value based on all these factors.
         NOTE: this should be implemented in each individual model.
         Inputs:
@@ -58,8 +58,8 @@ class EVModel(PredictionModel):
                       an incomplete set of cutoff data. Refer to the README for more."""
         raise NotImplementedError
 
-    # @lru_cache(maxsize=CACHE_SIZE)
-    def expected_value_day_2(self, price: int, amount: int, fit: Parameters, cutoffs: List[int]) -> float:
+    @lru_cache(maxsize=CACHE_SIZE)
+    def expected_value_day_2(self, price: int, amount: int, fit: Parameters, cutoffs: Tuple[int]) -> float:
         """This returns the expected value for day 2.
         The reason why this is a seperate function is because it is sometimes a different eqn.
             This makes sense, as it is the 'base case' for determining e.g. cutoff values.
@@ -78,14 +78,17 @@ class EVModel(PredictionModel):
 
         return self.expected_value(1, price, amount, fit, cutoffs)
 
+    @lru_cache(maxsize=CACHE_SIZE)
     def predict_one_subject(self, subject: int, fit: Optional[Parameters] = None) -> List[int]:
         """Returns the predicted sale amounts for each day.
+        Inputs:
             subject: the participant's number in the dataframe.
-            fit: the parameters to be used to predict the subject's behavior
+            fit: the parameters to be used to predict the subject's behavior.
+                NOTE: The free_params used in the fit will depend on the exact model.
         """
         # Ensure fit is not None
         if not fit:
-            raise ValueError("Expected Value based models need paramaters!")
+            raise ValueError("Expected Value based models need parameters!")
 
         # Get subject data
         subject_data: pd.DataFrame = self.get_data_one_subject(subject)
@@ -95,6 +98,10 @@ class EVModel(PredictionModel):
 
         # Generate cutoff values for this fit
         cutoffs = self.generate_cutoffs(fit)
+
+        # Turn cutoffs into a tuple
+        # This is to make it hashable and cacheable, and therefore save compute time
+        cutoffs_tuple: Tuple[int] = tuple(cutoffs)
 
         # Iterate through each day, backwards:
         for day in trange(self.num_days, leave=False, desc="Predicting..."):
@@ -112,7 +119,7 @@ class EVModel(PredictionModel):
                 continue
 
             # Sell everything the last day
-            if day == 0: # last day
+            if day == 0:
                 predictions.append(stored)
                 continue
 
@@ -120,9 +127,9 @@ class EVModel(PredictionModel):
             for sell_amount in range(stored + 1):
                 expected_value: float = 0
                 if day == 1: # second to last day
-                    expected_value = self.expected_value_day_2(price, sell_amount, fit, cutoffs)
+                    expected_value = self.expected_value_day_2(price, sell_amount, fit, cutoffs_tuple)
                 elif day >= 2: # all other days
-                    expected_value = self.expected_value(day, price, sell_amount, fit, cutoffs)
+                    expected_value = self.expected_value(day, price, sell_amount, fit, cutoffs_tuple)
                 # Save the best value
                 if expected_value > max_expected_value:
                     max_expected_value = expected_value

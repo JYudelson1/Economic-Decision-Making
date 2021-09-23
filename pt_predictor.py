@@ -30,7 +30,7 @@ class PTModel(EVModel):
             j: a hypothetical price that might occur.
             a: gain sensitivity, 0 <= a <= 1.
             g: overwighting of low probabilities, g >= 1."""
-        inner_bracket1 = amount * (price - j)
+        inner_bracket1: float = amount * (price - j)
         inner_bracket1 = inner_bracket1 ** a
         return inner_bracket1 * prelec(p(j), g)
 
@@ -44,24 +44,24 @@ class PTModel(EVModel):
             b: loss sensitivity, 0 <= a <= 1.
             l: coefficient of loss sensitivity, l >= 1.
             g: overwighting of low probabilities, 0 <= g <= 1."""
-        inner_bracket2 = amount * (j - price)
+        inner_bracket2: float = amount * (j - price)
         inner_bracket2 = inner_bracket2 ** b
         return inner_bracket2 * prelec(p(j), g) * l
 
-    # @lru_cache(maxsize=CACHE_SIZE)
-    def get_term_3a(self, day: int, f: float, cutoffs: List[int], g: float):
+    @lru_cache(maxsize=CACHE_SIZE)
+    def get_term_3a(self, day: int, f: int, cutoffs: Tuple[int], g: float):
         """Gets a particular term from equation (6).
         Moved to a seperate function to support caching."""
-        term_3a = 1
+        term_3a = 1.0
         for h in range(day - 1, f, -1):
-            sum_3a = 0
+            sum_3a = 0.0
             for k in range(1, cutoffs[h]):
                 sum_3a += prelec(p(k), g)
             term_3a *= sum_3a
         return term_3a
 
-    # @lru_cache(maxsize=CACHE_SIZE)
-    def expected_value(self, day: int, price: int, amount: int, fit: Parameters, cutoffs: List[int]) -> float:
+    @lru_cache(maxsize=CACHE_SIZE)
+    def expected_value(self, day: int, price: int, amount: int, fit: Parameters, cutoffs: Tuple[int]) -> float:
         """A straightforward implementation of equation (6).
         See ev_based_model.py for more notes."""
         ev: float = 0
@@ -81,12 +81,12 @@ class PTModel(EVModel):
             term_3a = self.get_term_3a(day, f, cutoffs, fit.g)
 
             # Term 3b
-            term_3b = 0
+            term_3b = 0.0
             for j in range(cutoffs[f], price):
                 term_3b += self.gain(amount, price, j, fit.a, fit.g)
 
             # Term 3c
-            term_3c = 0
+            term_3c = 0.0
             lower_bound_3c = max(price + 1, cutoffs[f])
             for j in range(lower_bound, 16):
                 term_3c += self.loss(amount, price, j, fit.b, fit.l, fit.g)
@@ -95,8 +95,8 @@ class PTModel(EVModel):
 
         return ev
 
-    # @lru_cache(maxsize=CACHE_SIZE)
-    def expected_value_day_2(self, price: int, amount: int, fit: Parameters, cutoffs: List[int]) -> float:
+    @lru_cache(maxsize=CACHE_SIZE)
+    def expected_value_day_2(self, price: int, amount: int, fit: Parameters, cutoffs: Tuple[int]) -> float:
         """A straightforward implementation of equation (4).
         See ev_based_model.py for more notes."""
         ev: float = 0
@@ -141,5 +141,5 @@ if __name__ == '__main__':
 
     # Saves best cutoff data
     model.save_cutoffs(f'{DATA_DIR}/prices_cutoff_pt.csv')
-    with open("pt_all_data.pkl", "w") as f:
+    with open("pt_all_data.pkl", "wb") as f:
         pkl.dump(model.data, f)
