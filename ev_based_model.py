@@ -39,7 +39,7 @@ class EVModel(PredictionModel):
             best_fit = self.best_fits[subject]
             cutoffs = self.generate_cutoffs(best_fit)
             for d in range(self.num_days):
-                df.loc[i, d] = cutoffs[d]
+                df.loc[subject, d] = cutoffs[d]
         df.to_csv(filename, index=False)
 
     # @lru_cache(maxsize=CACHE_SIZE)
