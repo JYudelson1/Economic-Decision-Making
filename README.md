@@ -17,16 +17,19 @@ Below are the files in the project, along with a few functions each contains. Th
     - get_valid_param_ranges()
     - p()
   - Contains a couple of constants
-- prediction_model.py:
   - Contains implementation of the Parameters class
     - Which just bundles together parameter values for ease of writing code, mainly
+- prediction_model.py:
   - Implements PredictionModel class  
     - This is the most general model, and the base class for all others
+    - Includes functions for fitting free parameters
+    - Includes functions for determining errors
 - ev_based_model.py:
   - Implements EVModel class
     - This is a model which determines cutoff prices based on an explicit expected value function. I think this is the case for most of the models he mentions.
     - Implements a dummy expected_value() function
     - Implements a predict_one_subject() function
+    - Implements a generate_cutoffs() function
 - eut_predictor.py
   - Implements EUTModel class
 - pt_predictor.py
@@ -55,17 +58,18 @@ The following is the annotated main function for pt_predictor.py. I think it's a
 ```
 if __name__ == '__main__':
 
+    # model name (to save to data dir)
+    version = "exhaustive_0-1_923_abs"
+
     # Error type can be "absolute" or "proportional"
     error_type = "absolute"
 
     # Initialize model
     model = PTModel()
 
-    # Run stupid fitting
-    # Note: for real fitting algorithm, precision should be .01
-    # Run bfs fitting
+    # Run fitting
     start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
-    model.bfs_fit(verbose=True, precision=0.1, error_type=error_type, start_fit=start_fit)
+    model.exhaustive_fit(precision=0.1, verbose=True, error_type=error_type)
 
     # Finalizes predictions
 
@@ -77,9 +81,8 @@ if __name__ == '__main__':
     print(f'std_dev = {std_deviation}')
     print(model.data)
 
-    # Saves best cutoff data
-    model.save_cutoffs(f'{DATA_DIR}/prices_cutoff_pt.csv')
-    with open(f'{DATA_DIR}/pt_all_data.pkl', "wb") as f:
-        pkl.dump(model.data, f)
+    # Saves data
+    with open(f'{DATA_DIR}/pt_{version}.pkl', "wb") as f:
+        pkl.dump(model, f)
 
 ```
