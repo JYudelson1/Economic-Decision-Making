@@ -164,13 +164,13 @@ class PredictionModel():
         #         self.data.loc[subject, "cutoff"][day] = cutoff_prices.loc[subject][day]
         return cutoff_prices
 
-    def stupid_fit_one_subject(self,
+    def exhaustive_fit_one_subject(self,
                                 subject: int,
                                 precision: float,
                                 verbose: bool = False,
                                 error_type: str = "proportional") -> None:
-        """Performs the stupid fit algorithm for one subject and saves the best fit.
-        The stupid fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
+        """Performs the exhaustive fit algorithm for one subject and saves the best fit.
+        The exhaustive fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
         Inputs:
             subject: the participant's number in the dataframe.
             precision: the amount to increment each value when iterating through all possible values.
@@ -222,8 +222,8 @@ class PredictionModel():
 
         self.best_fits[subject] = best_fit
 
-    def stupid_fit(self, precision: float = 0.001, verbose: bool = False, error_type: str = "proportional") -> None:
-        """Does the stupid fit algorithm for all subjects. Modifies in place.
+    def exhaustive_fit(self, precision: float = 0.001, verbose: bool = False, error_type: str = "proportional") -> None:
+        """Does the exhaustive fit algorithm for all subjects. Modifies in place.
         Inputs:
             precision: the amount to increment each value when iterating through all possible values.
             verbose: set to True to get progress bars for the fitting.
@@ -232,7 +232,7 @@ class PredictionModel():
                         the difference in proportion of goods sold. report.docx
                         seems to use proportional."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc="Stupid Fit"):
-            self.stupid_fit_one_subject(subject, precision, verbose, error_type)
+            self.exhaustive_fit_one_subject(subject, precision, verbose, error_type)
 
     def greedy_fit_one_subject(self,
                                subject: int,

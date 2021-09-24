@@ -66,6 +66,12 @@ class PTModel(EVModel):
         See ev_based_model.py for more notes."""
         ev: float = 0
 
+        # If the model has a time window, omly allow evaluation
+        # that many days into the future
+        last_day = 0
+        if fit.tw:
+            last_day = max(0, day - 1 - fit.tw)
+
         # First term
         for j in range(cutoffs[day - 1], price):
             ev += self.gain(amount, price, j, fit.a, fit.g)
@@ -76,7 +82,7 @@ class PTModel(EVModel):
             ev -= self.loss(amount, price, j, fit.b, fit.l, fit.g)
 
         # Third Term
-        for f in range(day - 2, -1, -1):
+        for f in range(day - 2, last_day - 1, -1):
             # Term 3a
             term_3a = self.get_term_3a(day, f, cutoffs, fit.g)
 
@@ -117,7 +123,7 @@ class PTModel(EVModel):
 
 def main() -> None:
     # model name (to save to data dir)
-    version = "bfs_0-05_923_abs"
+    version = "exhaustive_0-1_923_abs"
 
     # Error type can be "absolute" or "proportional"
     error_type = "absolute"
@@ -128,8 +134,8 @@ def main() -> None:
     # Run fitting
     start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
     #model.minimize_fit(start_fit=start_fit, verbose=True, error_type=error_type, method="Nelder-Mead")
-    model.bfs_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
-    #model.stupid_fit(precision=0.2, verbose=True, error_type=error_type)
+    #model.bfs_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
+    model.exhaustive_fit(precision=0.1, verbose=True, error_type=error_type)
     #model.greedy_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
     #model.simulated_annealing_fit(start_fit=start_fit, verbose=True, error_type=error_type)
 
@@ -148,8 +154,7 @@ def main() -> None:
     print(f'std_dev = {std_deviation}')
     print(model.data)
 
-    # Saves best cutoff data
-    #model.save_cutoffs(f'{DATA_DIR}/prices_cutoff_{version}.csv')
+    # Saves data
     with open(f'{DATA_DIR}/pt_{version}.pkl', "wb") as f:
         pkl.dump(model, f)
 
