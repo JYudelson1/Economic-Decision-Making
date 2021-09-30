@@ -4,16 +4,17 @@ class PredictionModel():
     """A model that uses the experiment data to generate predictions."""
 
     def __init__(self):
-        """Initilizes the PredictionModel"""
-
-        # Some models have free parameters. In that case, they vary from subject to subject
-        # This is a mapping from subjects to Parameter values
-        self.best_fits: Dict[int, Optional[Parameters]] = {}
+        """Initializes the PredictionModel"""
 
         # Get experiment data
         self.data: pd.DataFrame = get_full_data()
         self.num_subjects: int = 1 + self.data.index[-1][0]
         self.num_days: int = 1 + int(self.data.index[-1][1])
+
+        # Some models have free parameters. In that case, they vary from subject to subject
+        # This is a mapping from subjects to Parameter values
+        self.best_fits: Dict[int, Optional[Parameters]] = {}
+        self.all_best_fits: Dict[int, List[Parameters]] = {subject: [] for subject in range(self.num_subjects)}
 
         # Set free paramaters based on model type
         # NOTE: This should be reimplemented for each individual model
@@ -205,7 +206,7 @@ class PredictionModel():
                         total=iterations,
                         desc="Attempting all fits..."):
             # Skip fits where a > b
-            if fit[0] and fit[1] and fit[0] > fit[1]:
+            if fit[0] is not None and fit[1] is not None and fit[0] > fit[1]:
                 continue
 
             # Predict sale amounts based on fit
@@ -221,6 +222,7 @@ class PredictionModel():
                 best_fit = fit_params
 
         self.best_fits[subject] = best_fit
+        self.all_best_fits[subject].append(best_fit)
 
     def exhaustive_fit(self, precision: float = 0.001, verbose: bool = False, error_type: str = "proportional") -> None:
         """Does the exhaustive fit algorithm for all subjects. Modifies in place.
@@ -299,6 +301,7 @@ class PredictionModel():
                     # Local save and modify in plave
                     current_error = neighbor_error
                     self.best_fits[subject] = neighbor_fit
+                    self.all_best_fits[subject].append(neighbor_fit)
                     # Set changed flag
                     changed = True
 
@@ -396,6 +399,7 @@ class PredictionModel():
                 if neighbor_error < lowest_error:
                     lowest_error = neighbor_error
                     self.best_fits[subject] = neighbor_fit
+                    self.all_best_fits[subject].append(neighbor_fit)
 
     def bfs_fit(self,
                    precision: float = 0.001,
@@ -531,6 +535,7 @@ class PredictionModel():
 
         # Save result
         self.best_fits[subject] = result_params
+        self.all_best_fits[subject].append(result_params)
 
     def simulated_annealing_fit(self, start_fit: Parameters, verbose: bool = False, error_type: str = "proportional") -> None:
         """Does simulated annealing algorithm for all subjects. Modifies in place.

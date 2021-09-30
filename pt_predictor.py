@@ -66,12 +66,6 @@ class PTModel(EVModel):
         See ev_based_model.py for more notes."""
         ev: float = 0
 
-        # If the model has a time window, omly allow evaluation
-        # that many days into the future
-        last_day = 0
-        if fit.tw:
-            last_day = max(0, day - 1 - fit.tw)
-
         # First term
         for j in range(cutoffs[day - 1], price):
             ev += self.gain(amount, price, j, fit.a, fit.g)
@@ -82,7 +76,7 @@ class PTModel(EVModel):
             ev -= self.loss(amount, price, j, fit.b, fit.l, fit.g)
 
         # Third Term
-        for f in range(day - 2, last_day - 1, -1):
+        for f in range(day - 2, -1, -1):
             # Term 3a
             term_3a = self.get_term_3a(day, f, cutoffs, fit.g)
 
@@ -123,28 +117,21 @@ class PTModel(EVModel):
 
 def main() -> None:
     # model name (to save to data dir)
-    version = "exhaustive_0-1_923_abs"
+    version = "exhaustive_0-05_930_prop"
 
     # Error type can be "absolute" or "proportional"
-    error_type = "absolute"
+    error_type = "proportional"
 
     # Initialize model
     model = PTModel()
 
     # Run fitting
-    start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
+    #start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
     #model.minimize_fit(start_fit=start_fit, verbose=True, error_type=error_type, method="Nelder-Mead")
     #model.bfs_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
-    model.exhaustive_fit(precision=0.1, verbose=True, error_type=error_type)
+    model.exhaustive_fit(precision=0.05, verbose=True, error_type=error_type)
     #model.greedy_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
     #model.simulated_annealing_fit(start_fit=start_fit, verbose=True, error_type=error_type)
-
-    # Finalizes predictions
-    # Note: error_type = 'absolute' means that the model will use absolute differences
-    #       between prediction and sale amounts to determine error. error_type = 'proportional'
-    #       would use the difference in proportions of goods sold instead. The second seems to
-    #       be what Glass used in the report, but the numbers in Table 3 seem to suggest
-    #       the usage of absolute difference.
 
     mean_error = model.finalize_and_mean_error(error_type=error_type)
     std_deviation = model.std_dev_of_error(error_type=error_type)
@@ -161,3 +148,5 @@ def main() -> None:
 if __name__ == '__main__':
 
     main()
+    # with open("data/pt_tw_greedy_0-1_924_abs.pkl", "rb") as f:
+    #     m = pkl.load(f)

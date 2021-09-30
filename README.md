@@ -62,7 +62,7 @@ if __name__ == '__main__':
     version = "exhaustive_0-1_923_abs"
 
     # Error type can be "absolute" or "proportional"
-    error_type = "absolute"
+    error_type = "proportional"
 
     # Initialize model
     model = PTModel()
