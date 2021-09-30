@@ -4,16 +4,6 @@ import pickle as pkl
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-@lru_cache(maxsize=10000)
-def prelec(p: float, g: float) -> float:
-    """The subjective probability function.
-    Inputs:
-        p: the objective probability
-        g: gamma, the overweighting constant. g >= 1"""
-    # Note: seperated into two lines to avoid numpy warnings
-    neg_log: float = -np.log(p)
-    return exp(-(neg_log ** g))
-
 class PTModel(EVModel):
     """This model implements the predictions of Prospect Theory"""
 

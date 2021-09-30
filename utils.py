@@ -167,6 +167,16 @@ def p(price: int) -> float:
         price: price as an int"""
     return prices_probabilities.loc[price - 1]["probability"]
 
+@lru_cache(maxsize=CACHE_SIZE)
+def prelec(p: float, g: float) -> float:
+    """The subjective probability function.
+    Inputs:
+        p: the objective probability
+        g: gamma, the overweighting constant. g >= 1"""
+    # Note: seperated into two lines to avoid numpy warnings
+    neg_log: float = -np.log(p)
+    return exp(-(neg_log ** g))
+
 if __name__ == '__main__':
 
     # Check that the function works
