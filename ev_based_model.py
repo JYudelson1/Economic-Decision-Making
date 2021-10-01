@@ -23,14 +23,16 @@ class EVModel(PredictionModel):
         iter = range(1, self.num_days)
         for day in tqdm(iter, desc=f'Cutoffs', leave=False, disable=True):
             price: int = cutoffs[day - 1] # price has to be at least the last cutoff value
+
+            # Seperate EV function for day 2 (with index 1)
             if day == 1:
                 ev = self.expected_value_day_2(price, 1, fit, tuple(cutoffs))
             else:
                 ev = self.expected_value(day, price, 1, fit, tuple(cutoffs))
-            while (ev <= 0):
+
+            while (ev <= 0 and price < 15):
+                # Continually increment price until it is worthwhile to sell
                 price += 1
-                if price == 15:
-                    break
                 ev = self.expected_value(day, price, 1, fit, tuple(cutoffs))
             cutoffs.append(price)
         return cutoffs
