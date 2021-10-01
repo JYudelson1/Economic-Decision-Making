@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import minimize, Bounds, basinhopping
+from math import exp
 from typing import Optional, Dict, List, Union, Any, Tuple, Generator, Callable
 from tqdm import tqdm, trange
 from itertools import product
@@ -12,7 +13,7 @@ from warnings import catch_warnings, simplefilter
 ## Constants
 
 DATA_DIR = "data"
-CACHE_SIZE = None
+CACHE_SIZE = 5000
 NUM_DAYS = 68
 
 ## Utility Classes
@@ -174,7 +175,7 @@ def prelec(p: float, g: float) -> float:
         p: the objective probability
         g: gamma, the overweighting constant. g >= 1"""
     # Note: seperated into two lines to avoid numpy warnings
-    neg_log: float = -np.log(p)
+    neg_log: float = -np.log(p + np.finfo(float).eps)
     return exp(-(neg_log ** g))
 
 if __name__ == '__main__':

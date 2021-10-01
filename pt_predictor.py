@@ -1,5 +1,4 @@
 from ev_based_model import *
-from math import exp
 import pickle as pkl
 
 pd.options.mode.chained_assignment = None  # default='warn'
