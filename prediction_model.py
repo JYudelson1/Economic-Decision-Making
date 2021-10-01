@@ -458,7 +458,7 @@ class PredictionModel():
         # Convert the initial parameter set to a numpy array
         np_guess = np.array(guess_copy.tuplify())
         # Create the target fn
-        target: Callable[np.array, float] = lambda g: self.error_fn_target(subject, g, error_type)
+        target: Callable[[np.array], float] = lambda g: self.error_fn_target(subject, g, error_type)
 
         # Run the minimization function!
         #hess = lambda x: np.zeros((5, 5))
@@ -518,7 +518,7 @@ class PredictionModel():
         # Convert the initial parameter set to a numpy array
         np_guess = np.array(guess_copy.tuplify())
         # Create the target fn
-        target: Callable[np.array, float] = lambda g: self.error_fn_target(subject, g, error_type)
+        target: Callable[[np.array], float] = lambda g: self.error_fn_target(subject, g, error_type)
 
         # Run the minimization function!
         result = basinhopping(target,
