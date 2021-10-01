@@ -21,12 +21,17 @@ class EVModel(PredictionModel):
             fit: the Parameters used to calculate the cutoff values. """
         cutoffs: List[int] = [1]
         iter = range(1, self.num_days)
-        for i in tqdm(iter, desc=f'Cutoffs', leave=False, disable=True):
-            price: int = cutoffs[i - 1] # price has to be at least the last cutoff value
-            ev: float = self.expected_value(i, price, 1, fit, tuple(cutoffs))
+        for day in tqdm(iter, desc=f'Cutoffs', leave=False, disable=True):
+            price: int = cutoffs[day - 1] # price has to be at least the last cutoff value
+            if day == 1:
+                ev = self.expected_value_day_2(price, 1, fit, tuple(cutoffs))
+            else:
+                ev = self.expected_value(day, price, 1, fit, tuple(cutoffs))
             while (ev <= 0):
                 price += 1
-                ev = self.expected_value(i, price, 1, fit, tuple(cutoffs))
+                if price == 15:
+                    break
+                ev = self.expected_value(day, price, 1, fit, tuple(cutoffs))
             cutoffs.append(price)
         return cutoffs
 
