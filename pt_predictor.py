@@ -136,6 +136,6 @@ def main() -> None:
 
 if __name__ == '__main__':
 
-    main()
-    # with open("data/pt_tw_greedy_0-1_924_abs.pkl", "rb") as f:
-    #     m = pkl.load(f)
+    #main()
+    with open("data/pt_exhaustive_0-05_930_prop.pkl", "rb") as f:
+        m = pkl.load(f)

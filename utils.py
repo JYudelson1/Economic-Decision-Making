@@ -111,7 +111,7 @@ def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
         "b": list(np.arange(0, 1 + precision, precision)),
         "g": list(np.arange(0, 1 + precision, precision)),
         "l": list(np.arange(1, 3.5 + precision * 2, precision * 2)),
-        "tw": list(np.arange(1, NUM_DAYS, 1))
+        "tw": list(np.arange(2, NUM_DAYS, 1))
     }
     return valid_parameter_ranges
 
