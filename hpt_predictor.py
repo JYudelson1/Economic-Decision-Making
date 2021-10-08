@@ -92,7 +92,7 @@ def main() -> None:
     print(model.data)
 
     # Saves data
-    with open(f'{DATA_DIR}/pt_tw_{version}.pkl', "wb") as f:
+    with open(f'{DATA_DIR}/hpt_{version}.pkl', "wb") as f:
         pkl.dump(model, f)
 
 
