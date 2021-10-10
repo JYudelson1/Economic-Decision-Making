@@ -16,9 +16,11 @@ Below are the files in the project, along with a few functions each contains. Th
     - get_full_data()
     - get_valid_param_ranges()
     - p()
+    - get_all_neighbors()
+    - prelec()
   - Contains a couple of constants
   - Contains implementation of the Parameters class
-    - Which just bundles together parameter values for ease of writing code, mainly
+    - Which bundles together parameter values for models
 - prediction_model.py:
   - Implements PredictionModel class  
     - This is the most general model, and the base class for all others
@@ -48,6 +50,7 @@ However, note that the expected value also depends on the cutoffs. This seems ci
 
 1. Should error be absolute or proportional?
   - That is, should error be calcucated as the absolute difference between the predicted sale and the actual sale, or as a proportion of the amount they could have chosen to sell?
+  - **Answer:** Proportional.
 2. Implementation of time windows.
   - Most likely, this is a simple change to generate_cutoffs(). If I had to guess, just by mucking around with the ranges.
 
@@ -68,7 +71,6 @@ if __name__ == '__main__':
     model = PTModel()
 
     # Run fitting
-    start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
     model.exhaustive_fit(precision=0.1, verbose=True, error_type=error_type)
 
     # Finalizes predictions
