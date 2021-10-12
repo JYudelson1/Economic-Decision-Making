@@ -8,7 +8,7 @@ class EUTModel(PredictionModel):
         self.free_params = [] # Empty, since EUT has no free params
 
         # Get cutoff prices
-        self.cutoff_prices = pd.read_csv(f'{DATA_DIR}/prices_cutoff_eut.csv')
+        self.cutoff_prices = pd.read_csv(f'{DATA_DIR}/eut_cutoff_simple.csv')
 
     def predict_one_subject(self, subject: int, fit: Optional[Parameters] = None) -> List[int]:
         """Returns the predicted sale amounts.
@@ -17,7 +17,7 @@ class EUTModel(PredictionModel):
         subject_data = self.get_data_one_subject(subject)
 
         # Return the prediction that the subject will sell all units when the price is above the cutoff price
-        predictions: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[subject], subject_data['stored'], 0)
+        predictions: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[0], subject_data['stored'], 0)
 
         return predictions
 
