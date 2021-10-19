@@ -40,7 +40,7 @@ class HPTTWModel(EVModel):
         for j in range(1, price):
             psalesj += self.get_psalesj(j, fit.tw) * p(j)
             wp = prelec(psalesj, fit.g)
-            minuend += (wp * (n * (cutoffs[day - 1] - j))) / (1 + (n * (cutoffs[day - 1] - j)) * fit.xg)
+            minuend += (wp * (n * (price - j))) / (1 + (n * price - j)) * fit.xg)
 
         subtrahend = 0.0
         price = int(price)
@@ -48,7 +48,7 @@ class HPTTWModel(EVModel):
         for j in range(price + 1, 16):
             psalesj = self.get_psalesj(j, fit.tw) * p(j)
             wp = prelec(psalesj, fit.g)
-            subtrahend += (wp * fit.l * (n * (j - cutoffs[day - 1]))) / (1 + (n * (cutoffs[day - 1] - j) * fit.xl))
+            subtrahend += (wp * fit.l * (n * (j - price))) / (1 + (n * (price - j) * fit.xl))
         ev = minuend - subtrahend
         return ev
 
