@@ -22,7 +22,15 @@ class EVModel(PredictionModel):
         cutoffs: List[int] = [1]
         iter = range(1, self.num_days)
         for day in tqdm(iter, desc=f'Cutoffs', leave=False, disable=True):
+
             price: int = cutoffs[day - 1] # price has to be at least the last cutoff value
+
+            # If the model has a time window, every day after that point
+            # is the same. So If fit.tw = 20, every day from 20 to 67 has
+            # same cutoff as day 19.
+            if fit.tw and day >= fit.tw:
+                cutoffs.append(price)
+                continue
 
             # Seperate EV function for day 2 (with index 1)
             if day == 1:
