@@ -2,8 +2,9 @@
 
 import pandas as pd
 import numpy as np
+import pickle as pkl
 from scipy.optimize import minimize, Bounds, basinhopping
-from math import exp
+from math import exp, ceil
 from typing import Optional, Dict, List, Union, Any, Tuple, Generator, Callable
 from tqdm import tqdm, trange
 from itertools import product
@@ -15,6 +16,8 @@ from warnings import catch_warnings, simplefilter
 DATA_DIR = "data"
 CACHE_SIZE = 5000
 NUM_DAYS = 68
+TW_FACTOR = NUM_DAYS
+L_FACTOR = 2
 
 ## Utility Classes
 
@@ -110,7 +113,7 @@ def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
         "a": list(np.arange(0, 1 + precision, precision)),
         "b": list(np.arange(0, 1 + precision, precision)),
         "g": list(np.arange(0, 1 + precision, precision)),
-        "l": list(np.arange(1, 3.5 + precision * 2, precision * 2)),
+        "l": list(np.arange(1, 2 + precision, precision)),
         "tw": list(np.arange(2, NUM_DAYS, 1))
     }
     return valid_parameter_ranges
@@ -142,7 +145,7 @@ def get_all_neighbors(current: Parameters, precision: float) -> Any:
         range = [current_val]
         if current_val - precision >= 1:
             range.append(current_val - precision)
-        if current_val + precision <=3.5:
+        if current_val + precision <= 2:
             range.append(current_val + precision)
         ranges.append(range)
 
