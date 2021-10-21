@@ -155,6 +155,18 @@ class PredictionModel():
 
         return np.std(all_errors)
 
+    def print_info(self, error_type="proportional"):
+        """Prints mean error and std deviation of error of the model.
+           Additionally, saves prediction data to the model's DataFrame,
+           and then prints the dataframe."""
+
+        mean_error = self.finalize_and_mean_error(error_type=error_type)
+        std_deviation = self.std_dev_of_error(error_type=error_type)
+
+        print(f'mean_error = {mean_error}')
+        print(f'std_dev = {std_deviation}')
+        print(model.data)
+
     def load_cutoffs(self, filename: str) -> pd.DataFrame:
         """Loads i' cutoff values from a .csv file
         Inputs:
@@ -233,7 +245,7 @@ class PredictionModel():
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
                         seems to use proportional."""
-        for subject in trange(self.num_subjects, disable=(not verbose), desc="Stupid Fit"):
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="Exhaustive Fit"):
             self.exhaustive_fit_one_subject(subject, precision, verbose, error_type)
 
     def greedy_fit_one_subject(self,
@@ -431,6 +443,14 @@ class PredictionModel():
             """
         error_fn = self.get_error_fn(error_type)
         fit = Parameters(*list(params))
+
+        # Scale TW up
+        # Note: TW was scaled down by a factor of TW_FACTOR
+        #       for the sake of making minimize_fit and
+        #       simulated_annealing_fit work well with a
+        #       small step size.
+        if fit.tw:
+            fit.tw = TW_FACTOR * fit.tw
         predictions = self.predict_one_subject(subject, fit)
         error: float = error_fn(subject, predictions)
         return error
@@ -447,21 +467,31 @@ class PredictionModel():
 
         # Initialize the bounds for each parameter
         guess_copy = guess.deepcopy()
-        lower_bounds = [0.0, 0.0, 0.0, 1.0, 1]
-        upper_bounds = [1.0, 1.0, 1.0, 3.5, 68]
+
+        # Note: TW is scaled down by a factor of TW_FACTOR
+        #       for the sake of making minimize_fit and
+        #       simulated_annealing_fit work well with a
+        #       small step size.
+        if guess_copy.tw:
+            guess_copy.tw = guess_copy.tw / TW_FACTOR
+
+        # Setting bounds
+        lower_bounds = [0.0, 0.0, 0.0, 1.0, 1 / TW_FACTOR]
+        upper_bounds = [1.0, 1.0, 1.0, 2, 68 / TW_FACTOR]
         for i, param in enumerate(['a', 'b', 'g', 'l', 'tw']):
             if getattr(guess_copy, param):
                 continue
             upper_bounds[i] = lower_bounds[i]
             setattr(guess_copy, param, lower_bounds[i])
         bounds = Bounds(lower_bounds, upper_bounds)
+
         # Convert the initial parameter set to a numpy array
         np_guess = np.array(guess_copy.tuplify())
         # Create the target fn
         target: Callable[[np.array], float] = lambda g: self.error_fn_target(subject, g, error_type)
 
         # Run the minimization function!
-        #hess = lambda x: np.zeros((5, 5))
+        # hess = lambda x: np.zeros((5, 5))
         with catch_warnings():
             simplefilter('ignore')
             result = minimize(target,
@@ -470,12 +500,15 @@ class PredictionModel():
                               #hess=hess,
                               bounds=bounds)
         result_params = Parameters(*list(result.x))
+
         # Remove all dummy values from the result, keep only free params
         for param in ['a', 'b', 'g', 'l', 'tw']:
             if param in guess.free_params:
                 continue
             setattr(result_params, param, None)
         result_params.free_params = guess.free_params
+        if result_params.tw:
+            result_params.tw = ceil(result_params.tw * TW_FACTOR)
 
         # Save result
         self.best_fits[subject] = result_params
@@ -506,8 +539,16 @@ class PredictionModel():
 
         # Initialize the bounds for each parameter
         guess_copy = guess.deepcopy()
-        lower_bounds = [0.0, 0.0, 0.0, 1.0, 1]
-        upper_bounds = [1.0, 1.0, 1.0, 3.5, 68]
+        # Note: TW is scaled down by a factor of TW_FACTOR
+        #       for the sake of making minimize_fit and
+        #       simulated_annealing_fit work well with a
+        #       small step size.
+        if guess_copy.tw:
+            guess_copy.tw = guess_copy.tw / TW_FACTOR
+
+        # Setting bounds
+        lower_bounds = [0.0, 0.0, 0.0, 1.0, 1 / TW_FACTOR]
+        upper_bounds = [1.0, 1.0, 1.0, 2, 68 / TW_FACTOR]
         for i, param in enumerate(['a', 'b', 'g', 'l', 'tw']):
             if getattr(guess_copy, param):
                 continue
@@ -515,8 +556,10 @@ class PredictionModel():
             setattr(guess_copy, param, lower_bounds[i])
         bounds = Bounds(lower_bounds, upper_bounds)
         minimizer_kwargs = { "method": "L-BFGS-B","bounds":bounds }
+
         # Convert the initial parameter set to a numpy array
         np_guess = np.array(guess_copy.tuplify())
+
         # Create the target fn
         target: Callable[[np.array], float] = lambda g: self.error_fn_target(subject, g, error_type)
 
@@ -524,14 +567,20 @@ class PredictionModel():
         result = basinhopping(target,
                           np_guess,
                           minimizer_kwargs=minimizer_kwargs,
-                          niter=10)
+                          niter=20,
+                          T=0.1,
+                          stepsize=0.1
+                          )
         result_params = Parameters(*list(result.x))
+
         # Remove all dummy values from the result, keep only free params
         for param in ['a', 'b', 'g', 'l', 'tw']:
             if param in guess.free_params:
                 continue
             setattr(result_params, param, None)
         result_params.free_params = guess.free_params
+        if result_params.tw:
+            result_params.tw = ceil(result_params.tw * TW_FACTOR)
 
         # Save result
         self.best_fits[subject] = result_params
