@@ -165,7 +165,7 @@ class PredictionModel():
 
         print(f'mean_error = {mean_error}')
         print(f'std_dev = {std_deviation}')
-        print(model.data)
+        print(self.data)
 
     def load_cutoffs(self, filename: str) -> pd.DataFrame:
         """Loads i' cutoff values from a .csv file
@@ -194,7 +194,7 @@ class PredictionModel():
                         seems to use proportional."""
 
         lowest_error: float = float('inf')
-        best_fit: Optional[Parameters] = None
+        best_fit: Optional[Parameters] = Parameters(1, 1, 1, 1, 68)
 
         # Set correct error function
         error_fn = self.get_error_fn(error_type)
@@ -232,9 +232,12 @@ class PredictionModel():
             if error < lowest_error:
                 lowest_error = error
                 best_fit = fit_params
+            elif error == lowest_error and fit_params.a > best_fit.a:
+                self.best_fits[subject] = best_fit
+                #self.all_best_fits[subject].append(fit_params)
 
         self.best_fits[subject] = best_fit
-        self.all_best_fits[subject].append(best_fit)
+
 
     def exhaustive_fit(self, precision: float = 0.001, verbose: bool = False, error_type: str = "proportional") -> None:
         """Does the exhaustive fit algorithm for all subjects. Modifies in place.
@@ -247,6 +250,128 @@ class PredictionModel():
                         seems to use proportional."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc="Exhaustive Fit"):
             self.exhaustive_fit_one_subject(subject, precision, verbose, error_type)
+
+    def exhaustive_fit_with_guess_one_subject(self,
+                                subject: int,
+                                precision: float,
+                                prev_precision: float,
+                                verbose: bool = False,
+                                error_type: str = "proportional") -> None:
+        """Performs the exhaustive fit algorithm for one subject and saves the best fit.
+        The exhaustive fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
+        Inputs:
+            subject: the participant's number in the dataframe.
+            precision: the amount to increment each value when iterating through all possible values.
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional."""
+
+        prev_best_fit: Optional[Parameters] = self.best_fits[subject]
+        initial_pred = self.predict_one_subject(subject=subject, fit=prev_best_fit)
+        lowest_error = self.mean_error_one_subject_proportion(subject, initial_pred)
+        best_fit: Optional[Parameters] = prev_best_fit
+
+        # Set correct error function
+        error_fn = self.get_error_fn(error_type)
+
+        # Get lists of all possible values for all free params
+        low = lambda fit, old_precision, floor: max(floor, fit - old_precision/2) if fit else 0
+        high = lambda fit, old_precision, ceil: min(ceil, fit + old_precision/2) if fit else 0
+        valid_parameter_ranges: Dict[str, List[float]] = {
+            "a": list(np.arange(
+                            low(prev_best_fit.a, prev_precision, precision),
+                            high(prev_best_fit.a, prev_precision, 1) + precision,
+                            precision
+                )),
+            "b": list(np.arange(
+                            low(prev_best_fit.b, prev_precision, precision),
+                            high(prev_best_fit.b, prev_precision, 1) + precision,
+                            precision
+                )),
+            "g": list(np.arange(
+                            low(prev_best_fit.g, prev_precision, precision),
+                            high(prev_best_fit.g, prev_precision, 1) + precision,
+                            precision
+                )),
+            "l": list(np.arange(
+                            low(prev_best_fit.l, prev_precision, 1),
+                            high(prev_best_fit.l, prev_precision, 2) + precision,
+                            precision
+                )),
+            "tw": list(np.arange(2, NUM_DAYS, 1))
+        }
+
+        # Remove data on non-free params:
+        ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params else [None] for param in ("a", "b", "g", "l", "tw") ]
+
+        # Get all possible values via cartesian product
+        all_possible_fits = product(*ranges)
+
+        # Iterate through every possible value
+        iterations = 1
+        for range in ranges:
+            iterations *= len(range)
+        for fit in tqdm(all_possible_fits,
+                        disable=(not verbose),
+                        leave=False,
+                        total=iterations,
+                        desc="Attempting all fits..."):
+            # Skip fits where a > b
+            if fit[0] is not None and fit[1] is not None and fit[0] > fit[1]:
+                continue
+
+            # Predict sale amounts based on fit
+            fit_params: Parameters = Parameters(*fit)
+            predictions: List[int] = self.predict_one_subject(subject, fit_params)
+
+            # Get error for the given fit
+            error: float = error_fn(subject, predictions)
+
+            # Check if it's the best so far:
+            if error < lowest_error:
+                lowest_error = error
+                best_fit = fit_params
+            elif error == lowest_error and fit_params.a > best_fit.a:
+                self.best_fits[subject] = best_fit
+                #self.all_best_fits[subject].append(fit_params)
+
+        self.best_fits[subject] = best_fit
+
+
+    def exhaustive_fit_with_guess(self, precision: float, prev_precision: float, verbose: bool = False, error_type: str = "proportional") -> None:
+        """Does the exhaustive fit algorithm for all subjects. Modifies in place.
+        Use case is after exhaustive fit, to hone in on the previous best guess.
+        Inputs:
+            precision: the amount to increment each value when iterating through all possible values.
+            prev_precision: the level of precision the previous iteration of exhaustive search used.
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional."""
+        for subject in trange(self.num_subjects, disable=(not verbose), desc=f'Exhaustive Fit (p={precision})'):
+            self.exhaustive_fit_with_guess_one_subject(subject, precision, prev_precision, verbose, error_type)
+
+    def iterative_exhaustive_search(self, precisions: List[float], verbose: bool = False, error_type: str = "proportional") -> None:
+        """Does the iterative exhaustive fit algorithm for all subjects. Modifies in place.
+        Successively hones in on smaller regions of the search space.
+        Inputs:
+            precisions: A decreasing list of precision values
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional."""
+        self.exhaustive_fit(precision=precisions[0], verbose=True, error_type=error_type)
+        if verbose:
+            self.print_info()
+
+        for i in range(len(precisions) - 1):
+            self.exhaustive_fit_with_guess(precision=precisions[i+1], prev_precision=precisions[i], verbose=True, error_type=error_type)
+            if verbose:
+                self.print_info()
 
     def greedy_fit_one_subject(self,
                                subject: int,
@@ -555,7 +680,13 @@ class PredictionModel():
             upper_bounds[i] = lower_bounds[i]
             setattr(guess_copy, param, lower_bounds[i])
         bounds = Bounds(lower_bounds, upper_bounds)
-        minimizer_kwargs = { "method": "L-BFGS-B","bounds":bounds }
+        minimizer_kwargs = { "method": "L-BFGS-B",
+                            "bounds":bounds,
+                            # "options":
+                            #     {
+                            #         "eps":np.array([.00001, .00001, .00001, .01, 1/TW_FACTOR**2])
+                            #     }
+                            }
 
         # Convert the initial parameter set to a numpy array
         np_guess = np.array(guess_copy.tuplify())
@@ -567,7 +698,7 @@ class PredictionModel():
         result = basinhopping(target,
                           np_guess,
                           minimizer_kwargs=minimizer_kwargs,
-                          niter=20,
+                          niter=40,
                           T=0.1,
                           stepsize=0.1
                           )
