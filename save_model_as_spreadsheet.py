@@ -71,7 +71,7 @@ def main(version: str, filename: str) -> None:
         # save only the free params
         for i, param in enumerate(fit.free_params):
             # Rounding just to remove floating point error
-            paramsheet[current_row][i+1].value = str(round(getattr(fit,param), 4))
+            paramsheet[current_row][i+1].value = str(round(getattr(fit,param), 3))
 
         # Get predictions for that fit
         predictions: List[int] = model.predict_one_subject(s, fit)
