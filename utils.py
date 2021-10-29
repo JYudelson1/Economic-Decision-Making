@@ -14,10 +14,10 @@ from warnings import catch_warnings, simplefilter
 ## Constants
 
 DATA_DIR = "data"
-CACHE_SIZE = 100000
+CACHE_SIZE = 1000000
 NUM_DAYS = 68
 TW_FACTOR = NUM_DAYS
-L_FACTOR = 2
+L_FACTOR = 1
 
 ## Utility Classes
 
