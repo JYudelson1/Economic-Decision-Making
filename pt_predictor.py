@@ -1,5 +1,5 @@
 from ev_based_model import *
-import pickle as pkl
+from eut_predictor import *
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -18,7 +18,7 @@ class PTModel(EVModel):
             price: the current price.
             j: a hypothetical price that might occur.
             a: gain sensitivity, 0 <= a <= 1.
-            g: overwighting of low probabilities, g >= 1."""
+            g: overwighting of low probabilities, 0 <= g <= 1."""
         inner_bracket1: float = amount * (price - j)
         inner_bracket1 = inner_bracket1 ** a
         return inner_bracket1 * prelec(p(j), g)
@@ -38,14 +38,16 @@ class PTModel(EVModel):
         return inner_bracket2 * prelec(p(j), g) * l
 
     @lru_cache(maxsize=CACHE_SIZE)
-    def get_term_3a(self, day: int, f: int, cutoffs: Tuple[int], g: float):
+    def get_term_3a(self, day: int, k: int, cutoffs: Tuple[int], g: float):
         """Gets a particular term from equation (6).
         Moved to a seperate function to support caching."""
         term_3a = 1.0
-        for h in range(day - 1, f, -1):
+        for h in range(1, k + 1):
+            # print(cutoffs)
+            # print(day, k, h)
             sum_3a = 0.0
-            for k in range(1, cutoffs[h]):
-                sum_3a += prelec(p(k), g)
+            for j in range(1, cutoffs[day - h]):
+                sum_3a += prelec(p(j), g)
             term_3a *= sum_3a
         return term_3a
 
@@ -65,18 +67,19 @@ class PTModel(EVModel):
             ev -= self.loss(amount, price, j, fit.b, fit.l, fit.g)
 
         # Third Term
-        for f in range(day - 2, -1, -1):
+        bound = day + 1
+        for k in range(1, bound + 1):
             # Term 3a
-            term_3a = self.get_term_3a(day, f, cutoffs, fit.g)
+            term_3a = self.get_term_3a(day, k-1, cutoffs, fit.g)
 
             # Term 3b
             term_3b = 0.0
-            for j in range(cutoffs[f], price):
+            for j in range(cutoffs[day - k], price):
                 term_3b += self.gain(amount, price, j, fit.a, fit.g)
 
             # Term 3c
             term_3c = 0.0
-            lower_bound_3c = max(price + 1, cutoffs[f])
+            lower_bound_3c = max(price + 1, cutoffs[day - k])
             for j in range(lower_bound, 16):
                 term_3c += self.loss(amount, price, j, fit.b, fit.l, fit.g)
 
@@ -88,25 +91,10 @@ class PTModel(EVModel):
     def expected_value_day_2(self, price: int, amount: int, fit: Parameters, cutoffs: Tuple[int]) -> float:
         """A straightforward implementation of equation (4).
         See ev_based_model.py for more notes."""
-        ev: float = 0
 
-        # Subjective gains
-        for j in range(1, price):
-            subjective_prob = prelec(p(j), fit.g)
-            subjective_gain = (amount * (price - j)) ** fit.a
-            ev += subjective_prob * subjective_gain
+        return self.expected_value(1, price, amount, fit, (1,))
 
-        #Subjective losses
-        for j in range(price + 1, 16):
-            subjective_prob = prelec(p(j), fit.g)
-            subjective_gain = (amount * (j - price)) ** fit.b
-            ev -= subjective_prob * subjective_gain * fit.l
-
-        return ev
-
-def main() -> None:
-    # model name (to save to data dir)
-    version = "exhaustive_0-05_930_prop"
+def main(version: str) -> None:
 
     # Error type can be "absolute" or "proportional"
     error_type = "proportional"
@@ -118,24 +106,51 @@ def main() -> None:
     #start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
     #model.minimize_fit(start_fit=start_fit, verbose=True, error_type=error_type, method="Nelder-Mead")
     #model.bfs_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
-    model.exhaustive_fit(precision=0.05, verbose=True, error_type=error_type)
-    #model.greedy_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
+    #model.greedy_fit(verbose=True, precision=0.1, error_type=error_type, start_fit=start_fit)
     #model.simulated_annealing_fit(start_fit=start_fit, verbose=True, error_type=error_type)
+    #model.exhaustive_fit(precision=0.2, verbose=True, error_type=error_type)
 
-    mean_error = model.finalize_and_mean_error(error_type=error_type)
-    std_deviation = model.std_dev_of_error(error_type=error_type)
+    precisions = (0.1, 0.01, 0.001)
+    model.iterative_exhaustive_search(precisions, verbose=True, start=True)
 
-    # Prints
-    print(f'mean_error = {mean_error}')
-    print(f'std_dev = {std_deviation}')
-    print(model.data)
+    # Print
+    model.print_info()
 
     # Saves data
     with open(f'{DATA_DIR}/pt_{version}.pkl', "wb") as f:
         pkl.dump(model, f)
 
-if __name__ == '__main__':
+def check_for_eut():
+    # Error type can be "absolute" or "proportional"
+    error_type = "proportional"
 
-    #main()
-    with open("data/pt_exhaustive_0-05_930_prop.pkl", "rb") as f:
-        m = pkl.load(f)
+    # Initialize model
+    pt_model = PTModel()
+
+    for subject in range(pt_model.num_subjects):
+        pt_model.best_fits[subject] = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
+
+    pt_mean_error = pt_model.finalize_and_mean_error(error_type=error_type)
+    pt_std_deviation = pt_model.std_dev_of_error(error_type=error_type)
+
+    eut_model = EUTModel()
+    eut_mean_error = eut_model.finalize_and_mean_error(error_type=error_type)
+    eut_std_deviation = eut_model.std_dev_of_error(error_type=error_type)
+
+    # Prints
+    print(f'pt mean_error = {pt_mean_error}')
+    print(f'pt std_dev = {pt_std_deviation}')
+    print(f'eut mean_error = {eut_mean_error}')
+    print(f'eut std_dev = {eut_std_deviation}')
+
+    eut_errors: List[float] = eut_model.mean_error_all_subjects(error_type,
+                                                           False,
+                                                           save_predictions=True)
+
+    for subject in trange(pt_model.num_subjects):
+        assert list(pt_model.data.loc[subject]['prediction']) == list(eut_model.data.loc[subject]['prediction'])
+
+if __name__ == '__main__':
+    # model name (to save to data dir)
+    version = "v2_exhaustive_iter_full_1029"
+    main(version=version)
