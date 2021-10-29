@@ -232,9 +232,10 @@ class PredictionModel():
             if error < lowest_error:
                 lowest_error = error
                 best_fit = fit_params
-            elif error == lowest_error and fit_params.a > best_fit.a:
-                self.best_fits[subject] = best_fit
-                #self.all_best_fits[subject].append(fit_params)
+                self.all_best_fits[subject] = [fit_params]
+            elif error == lowest_error:
+                best_fit = fit_params
+                self.all_best_fits[subject].append(fit_params)
 
         self.best_fits[subject] = best_fit
 
@@ -333,9 +334,10 @@ class PredictionModel():
             if error < lowest_error:
                 lowest_error = error
                 best_fit = fit_params
-            elif error == lowest_error and fit_params.a > best_fit.a:
-                self.best_fits[subject] = best_fit
-                #self.all_best_fits[subject].append(fit_params)
+                self.all_best_fits[subject] = [fit_params]
+            elif error == lowest_error:
+                best_fit = fit_params
+                self.all_best_fits[subject].append(fit_params)
 
         self.best_fits[subject] = best_fit
 
@@ -354,7 +356,7 @@ class PredictionModel():
         for subject in trange(self.num_subjects, disable=(not verbose), desc=f'Exhaustive Fit (p={precision})'):
             self.exhaustive_fit_with_guess_one_subject(subject, precision, prev_precision, verbose, error_type)
 
-    def iterative_exhaustive_search(self, precisions: List[float], verbose: bool = False, error_type: str = "proportional") -> None:
+    def iterative_exhaustive_search(self, precisions: List[float], verbose: bool = False, error_type: str = "proportional", start=True) -> None:
         """Does the iterative exhaustive fit algorithm for all subjects. Modifies in place.
         Successively hones in on smaller regions of the search space.
         Inputs:
@@ -363,15 +365,21 @@ class PredictionModel():
             error_type: should the error be calculated as the absolute difference
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
-                        seems to use proportional."""
-        self.exhaustive_fit(precision=precisions[0], verbose=True, error_type=error_type)
-        if verbose:
-            self.print_info()
+                        seems to use proportional.
+            start: if True, also run first exhaustive fit with first precision value."""
+        if start:
+            self.exhaustive_fit(precision=precisions[0], verbose=True, error_type=error_type)
+            if verbose:
+                self.print_info()
+            else:
+                self.mean_error_all_subjects(error_type, False, save_predictions=True)
 
         for i in range(len(precisions) - 1):
             self.exhaustive_fit_with_guess(precision=precisions[i+1], prev_precision=precisions[i], verbose=True, error_type=error_type)
             if verbose:
                 self.print_info()
+            else:
+                self.mean_error_all_subjects(error_type, False, save_predictions=True)
 
     def greedy_fit_one_subject(self,
                                subject: int,
