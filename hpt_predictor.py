@@ -18,7 +18,7 @@ class HPTTWModel(EVModel):
     def get_psalesj(self, j, tw):
         """Finds psales,j that is plugged into Prelec funtion"""
         psalesj: float = 0
-        for k in range(0, tw - 1):
+        for k in range(day - 2, -1 + (68 - tw), -1):
             ph: float = 0
             for h in range(1, j):
                 ph += p(h)
