@@ -1,3 +1,5 @@
 __pycache__/*
 data/*.csv
 data/*.pkl
+.DS_Store
+data/.DS_Store
