@@ -2,7 +2,7 @@ import pickle as pkl
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from pt_predictor import *
-from hpt_predictor import *
+#from hpt_predictor import *
 
 fullnames = {
     "a": "alpha",
@@ -27,6 +27,7 @@ def main(version: str, filename: str) -> None:
 
     # Add headers to first sheet
     paramsheet["A1"] = "Subject"
+    err_col = 2
     for i, cell in enumerate(paramsheet.iter_cols(min_col = 2,
                                                   max_col = 6,
                                                   min_row = 1,
@@ -34,6 +35,8 @@ def main(version: str, filename: str) -> None:
         if i >= len(model.free_params):
             break
         cell[0].value = fullnames[model.free_params[i]]
+        err_col += 1
+    paramsheet[f'A{err_col}'] = "Errors"
 
     # Add headers to second sheet
     predsheet["A1"] = "Subject"
@@ -59,7 +62,8 @@ def main(version: str, filename: str) -> None:
 
 
     # Iterate through each patient, getting each best fit
-    current_row = 3
+    current_row_pred = 3
+    current_ror_param = 3
     for s in trange(57, desc="Saving..."):
         subject = s + 1
 
@@ -68,13 +72,21 @@ def main(version: str, filename: str) -> None:
         paramsheet[f'A{current_row}'] = subject
         predsheet[f'A{current_row}'] = subject
 
-        # save only the free params
-        for i, param in enumerate(fit.free_params):
-            # Rounding just to remove floating point error
-            paramsheet[current_row][i+1].value = str(round(getattr(fit,param), 3))
-
         # Get predictions for that fit
         predictions: List[int] = model.predict_one_subject(s, fit)
+
+        # Get and save errors
+        error = model.mean_error_one_subject_proportion(s, predictions)
+
+        paramsheet.cell(row=current_row_param, column=err_col, value=round(error, 3))
+
+        all_fits = model.all_best_fits[s]
+        for good_fit in all_fits:
+            # save only the free params
+            for i, param in enumerate(fit.free_params):
+                # Rounding just to remove floating point error
+                paramsheet[current_row_param][i+1].value = str(round(getattr(fit,param), 3))
+            current_ror_param += 1
 
         # Iterate through each day
         for d in range(NUM_DAYS):
@@ -86,13 +98,7 @@ def main(version: str, filename: str) -> None:
             predsheet.cell(row=current_row, column=(day*4+1), value=int(model.data.loc[s]['sold'][d]))
             predsheet.cell(row=current_row, column=(day*4+2), value=predictions[d])
 
-        # Save errors
-        # error: float = model.mean_error_one_subject_proportion(s, predictions)
-        # errorsheet[f'B{current_row}'] = error
-        # errorsheet[f'C{current_row}'] = str(100 * error) + "%"
-
-
-        current_row += 1
+        current_row_pred += 1
 
     # Save final mean error & std dev of error
     # all_errors: List[float] = model.mean_error_all_subjects(verbose=False)
@@ -113,6 +119,6 @@ def main(version: str, filename: str) -> None:
 
 if __name__ == '__main__':
 
-    filename = "data/pt_predictions_v2.xlsx"
-    version = "data/pt_v2_greedy_0-1_1021.pkl"
+    filename = "data/pt_predictions_full_iter_1029.xlsx"
+    version = "data/v2_exhaustive_iter_full_1029.pkl"
     main(version=version, filename=filename)
