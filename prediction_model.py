@@ -13,12 +13,12 @@ class PredictionModel():
 
         # Some models have free parameters. In that case, they vary from subject to subject
         # This is a mapping from subjects to Parameter values
-        self.best_fits: Dict[int, Optional[Parameters]] = {}
+        self.best_fits: Dict[int, Parameters] = {}
         self.all_best_fits: Dict[int, List[Parameters]] = {subject: [] for subject in range(self.num_subjects)}
 
         # Set free paramaters based on model type
         # NOTE: This should be reimplemented for each individual model
-        self.free_params: Optional[List[str]] = None
+        self.free_params: List[str]
 
     def get_data_one_subject(self, subject: int) -> pd.DataFrame:
         """Returns all data corresponding to the given subject.
@@ -194,7 +194,7 @@ class PredictionModel():
                         seems to use proportional."""
 
         lowest_error: float = float('inf')
-        best_fit: Optional[Parameters] = Parameters(1, 1, 1, 1, 68)
+        best_fit: Parameters = Parameters(1, 1, 1, 1, 68)
 
         # Set correct error function
         error_fn = self.get_error_fn(error_type)
@@ -269,10 +269,10 @@ class PredictionModel():
                         the difference in proportion of goods sold. report.docx
                         seems to use proportional."""
 
-        prev_best_fit: Optional[Parameters] = self.best_fits[subject]
+        prev_best_fit: Parameters = self.best_fits[subject]
         initial_pred = self.predict_one_subject(subject=subject, fit=prev_best_fit)
         lowest_error = self.mean_error_one_subject_proportion(subject, initial_pred)
-        best_fit: Optional[Parameters] = prev_best_fit
+        best_fit: Parameters = prev_best_fit
 
         # Set correct error function
         error_fn = self.get_error_fn(error_type)
@@ -356,7 +356,7 @@ class PredictionModel():
         for subject in trange(self.num_subjects, disable=(not verbose), desc=f'Exhaustive Fit (p={precision})'):
             self.exhaustive_fit_with_guess_one_subject(subject, precision, prev_precision, verbose, error_type)
 
-    def iterative_exhaustive_search(self, precisions: List[float], verbose: bool = False, error_type: str = "proportional", start=True) -> None:
+    def iterative_exhaustive_search(self, precisions: Tuple[float, ...], verbose: bool = False, error_type: str = "proportional", start=True) -> None:
         """Does the iterative exhaustive fit algorithm for all subjects. Modifies in place.
         Successively hones in on smaller regions of the search space.
         Inputs:

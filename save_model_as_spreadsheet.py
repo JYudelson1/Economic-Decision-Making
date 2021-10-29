@@ -1,6 +1,6 @@
 import pickle as pkl
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
+from openpyxl import Workbook #type: ignore
+from openpyxl.styles import Font, Alignment #type: ignore
 from pt_predictor import *
 #from hpt_predictor import *
 
@@ -12,7 +12,7 @@ fullnames = {
     "tw": "time window"
 }
 
-def main(version: str, filename: str) -> None:
+def spreadsheet_main(version: str, filename: str) -> None:
 
     # Load model
     with open(version, "rb") as f:
@@ -63,14 +63,14 @@ def main(version: str, filename: str) -> None:
 
     # Iterate through each patient, getting each best fit
     current_row_pred = 3
-    current_ror_param = 3
+    current_row_param = 3
     for s in trange(57, desc="Saving..."):
         subject = s + 1
 
         ## Save prediction data & best fit data
         fit = model.best_fits[s]
-        paramsheet[f'A{current_row}'] = subject
-        predsheet[f'A{current_row}'] = subject
+        paramsheet[f'A{current_row_param}'] = subject
+        predsheet[f'A{current_row_param}'] = subject
 
         # Get predictions for that fit
         predictions: List[int] = model.predict_one_subject(s, fit)
@@ -86,17 +86,17 @@ def main(version: str, filename: str) -> None:
             for i, param in enumerate(fit.free_params):
                 # Rounding just to remove floating point error
                 paramsheet[current_row_param][i+1].value = str(round(getattr(fit,param), 3))
-            current_ror_param += 1
+            current_row_param += 1
 
         # Iterate through each day
         for d in range(NUM_DAYS):
             day = NUM_DAYS - d
 
             # Save info
-            predsheet.cell(row=current_row, column=(day*4-1), value=int(model.data.loc[s]['stored'][d]))
-            predsheet.cell(row=current_row, column=(day*4), value=int(model.data.loc[s]['price'][d]))
-            predsheet.cell(row=current_row, column=(day*4+1), value=int(model.data.loc[s]['sold'][d]))
-            predsheet.cell(row=current_row, column=(day*4+2), value=predictions[d])
+            predsheet.cell(row=current_row_pred, column=(day*4-1), value=int(model.data.loc[s]['stored'][d]))
+            predsheet.cell(row=current_row_pred, column=(day*4), value=int(model.data.loc[s]['price'][d]))
+            predsheet.cell(row=current_row_pred, column=(day*4+1), value=int(model.data.loc[s]['sold'][d]))
+            predsheet.cell(row=current_row_pred, column=(day*4+2), value=predictions[d])
 
         current_row_pred += 1
 
@@ -121,4 +121,4 @@ if __name__ == '__main__':
 
     filename = "data/pt_predictions_full_iter_1029.xlsx"
     version = "data/v2_exhaustive_iter_full_1029.pkl"
-    main(version=version, filename=filename)
+    spreadsheet_main(version=version, filename=filename)

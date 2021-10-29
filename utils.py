@@ -1,12 +1,12 @@
 ## Imports
 
-import pandas as pd
-import numpy as np
+import pandas as pd #type: ignore
+import numpy as np #type: ignore
 import pickle as pkl
-from scipy.optimize import minimize, Bounds, basinhopping
+from scipy.optimize import minimize, Bounds, basinhopping #type: ignore
 from math import exp, ceil
-from typing import Optional, Dict, List, Union, Any, Tuple, Generator, Callable
-from tqdm import tqdm, trange
+from typing import Optional, Dict, List, Union, Any, Tuple, Generator, Callable, Iterable
+from tqdm import tqdm, trange #type: ignore
 from itertools import product
 from functools import lru_cache
 from warnings import catch_warnings, simplefilter
@@ -118,7 +118,7 @@ def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
     }
     return valid_parameter_ranges
 
-def get_all_neighbors(current: Parameters, precision: float) -> Any:
+def get_all_neighbors(current: Optional[Parameters], precision: float) -> Any:
     """Given a Parameters object, returns all the neighbors within precision of it.
     NOTE: precision has no effect on TW, for which the neighbor will always be one above or below.
     NOTE: this returns a generator object from itertools.product, NOT a list!
@@ -126,6 +126,10 @@ def get_all_neighbors(current: Parameters, precision: float) -> Any:
     Inputs:
         current: the Parameters object whose neighbors should be returned.
         precision: the amount to increment each value when traversing the search space"""
+
+    # Ensure the starting point is real
+    if current is None:
+        return None
 
     ranges : List[List[Union[float, int]]] = []
     params: List[str] = current.free_params
@@ -183,6 +187,6 @@ def prelec(p: float, g: float) -> float:
 
 if __name__ == '__main__':
 
-    # Check that the function works
+    # Check that the functions work
     print(get_full_data().index[-1][0])
     print(len(get_full_data()))
