@@ -14,15 +14,18 @@ from warnings import catch_warnings, simplefilter
 ## Constants
 
 DATA_DIR = "data"
-CACHE_SIZE = 1000000
+CACHE_SIZE = None
 NUM_DAYS = 68
 TW_FACTOR = NUM_DAYS
 L_FACTOR = 1
+EPS = np.finfo(float).eps
 
 ## Utility Classes
 
 class Parameters():
     """A data class to hold values for free parameters"""
+
+    __slots__ = ['a', 'b', 'g', 'l', 'tw', 'free_params']
 
     def __init__(self, a = None,
                         b = None,
@@ -110,10 +113,10 @@ def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
     Inputs:
         precision: the amount to increment each value when iterating through all possible values."""
     valid_parameter_ranges: Dict[str, List[float]] = {
-        "a": list(np.arange(precision, 1 + precision, precision)),
-        "b": list(np.arange(precision, 1 + precision, precision)),
-        "g": list(np.arange(precision, 1 + precision, precision)),
-        "l": list(np.arange(1, 2 + precision, precision)),
+        "a": list(np.arange(precision, 1 + EPS, precision)),
+        "b": list(np.arange(precision, 1 + EPS, precision)),
+        "g": list(np.arange(precision, 1 + EPS, precision)),
+        "l": list(np.arange(1, 2 + EPS, precision)),
         "tw": list(np.arange(2, NUM_DAYS, 1))
     }
     return valid_parameter_ranges
