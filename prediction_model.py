@@ -203,7 +203,9 @@ class PredictionModel():
         valid_parameter_ranges: Dict[str, List[float]] = get_valid_param_ranges(precision)
 
         # Remove data on non-free params:
-        ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params else [None] for param in ("a", "b", "g", "l", "tw") ]
+        ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params
+                                                                 else [None]
+                                                                 for param in ("a", "b", "g", "l", "tw") ]
 
         # Get all possible values via cartesian product
         all_possible_fits = product(*ranges)
@@ -234,11 +236,11 @@ class PredictionModel():
                 best_fit = fit_params
                 self.all_best_fits[subject] = [fit_params]
             elif error == lowest_error:
-                best_fit = fit_params
+                if fit_params.a >= best_fit.a:
+                    best_fit = fit_params
                 self.all_best_fits[subject].append(fit_params)
 
         self.best_fits[subject] = best_fit
-
 
     def exhaustive_fit(self, precision: float = 0.001, verbose: bool = False, error_type: str = "proportional") -> None:
         """Does the exhaustive fit algorithm for all subjects. Modifies in place.
@@ -283,29 +285,31 @@ class PredictionModel():
         valid_parameter_ranges: Dict[str, List[float]] = {
             "a": list(np.arange(
                             low(prev_best_fit.a, prev_precision, precision),
-                            high(prev_best_fit.a, prev_precision, 1) + precision,
+                            high(prev_best_fit.a, prev_precision, 1) + EPS,
                             precision
                 )),
             "b": list(np.arange(
                             low(prev_best_fit.b, prev_precision, precision),
-                            high(prev_best_fit.b, prev_precision, 1) + precision,
+                            high(prev_best_fit.b, prev_precision, 1) + EPS,
                             precision
                 )),
             "g": list(np.arange(
                             low(prev_best_fit.g, prev_precision, precision),
-                            high(prev_best_fit.g, prev_precision, 1) + precision,
+                            high(prev_best_fit.g, prev_precision, 1) + EPS,
                             precision
                 )),
             "l": list(np.arange(
                             low(prev_best_fit.l, prev_precision, 1),
-                            high(prev_best_fit.l, prev_precision, 2) + precision,
+                            high(prev_best_fit.l, prev_precision, 2) + EPS,
                             precision
                 )),
             "tw": list(np.arange(2, NUM_DAYS, 1))
         }
 
         # Remove data on non-free params:
-        ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params else [None] for param in ("a", "b", "g", "l", "tw") ]
+        ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params
+                                                                 else [None]
+                                                                 for param in ("a", "b", "g", "l", "tw") ]
 
         # Get all possible values via cartesian product
         all_possible_fits = product(*ranges)
@@ -336,11 +340,11 @@ class PredictionModel():
                 best_fit = fit_params
                 self.all_best_fits[subject] = [fit_params]
             elif error == lowest_error:
-                best_fit = fit_params
+                if fit_params.a >= best_fit.a:
+                    best_fit = fit_params
                 self.all_best_fits[subject].append(fit_params)
 
         self.best_fits[subject] = best_fit
-
 
     def exhaustive_fit_with_guess(self, precision: float, prev_precision: float, verbose: bool = False, error_type: str = "proportional") -> None:
         """Does the exhaustive fit algorithm for all subjects. Modifies in place.
