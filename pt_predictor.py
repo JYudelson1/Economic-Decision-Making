@@ -110,7 +110,7 @@ def main(version: str) -> None:
     #model.simulated_annealing_fit(start_fit=start_fit, verbose=True, error_type=error_type)
     #model.exhaustive_fit(precision=0.2, verbose=True, error_type=error_type)
 
-    precisions = (0.1, 0.01, 0.001)
+    precisions = (0.05, 0.01, 0.001)
     model.iterative_exhaustive_search(precisions, verbose=True, start=True)
 
     # Print
@@ -120,7 +120,9 @@ def main(version: str) -> None:
     with open(f'{DATA_DIR}/pt_{version}.pkl', "wb") as f:
         pkl.dump(model, f)
 
-def check_for_eut():
+def TEST_check_for_eut() -> None:
+    """If PT is coded properly, when a=b=g=l=1.0, it should collapse
+    to the predictions of EUT. This function, when run, simply asserts that this is true."""
     # Error type can be "absolute" or "proportional"
     error_type = "proportional"
 
@@ -150,7 +152,48 @@ def check_for_eut():
     for subject in trange(pt_model.num_subjects):
         assert list(pt_model.data.loc[subject]['prediction']) == list(eut_model.data.loc[subject]['prediction'])
 
+def TEST_check_last_groups_values() -> None:
+    """Explanation: The last group to work on this project came up with very different values.
+    One explanation is that they seemed to have checked error for each participant by checking
+    the absolute value of the sum of the differences between predicted sale amounts and actual sale amounts.
+
+    The correct method, however, is to use sum(abs(diff)), not abs(sum(diff)).
+    This function uses abs(sum(diff)), and checks to make sure that this yields the errors the last group found."""
+
+    def mean_error_one_subject_abs_sum(model: PTModel, subject: int, predictions: List[int]) -> float:
+        d_0: int = 0 # Number of days for which the participant had no goods stored
+        total_error: float = 0
+        subject_data: pd.DataFrame = model.get_data_one_subject(subject)
+
+        # Iterate through the days and sum the error
+        for day in range(model.num_days):
+            if subject_data['stored'][day] == 0:
+                d_0 += 1
+                continue
+            day_error: float = (predictions[day] - subject_data['sold'][day]) / subject_data['stored'][day]
+            total_error += day_error
+
+        # Find the mean
+        mean_error: float = total_error / (model.num_days - d_0)
+
+        return abs(mean_error)
+
+    model = PTModel()
+
+    # Initialize model with the parameter values found by the previous group
+    fits = {
+        0: Parameters(a=.806,b=.84,g=1,l=1.4),
+        1: Parameters(a=.894,b=1,g=1,l=1)
+    }
+
+    # Iterate through each subject and check errors
+    for subject in range(model.num_subjects):
+        pred = model.predict_one_subject(subject, fits[subject])
+        error = mean_error_one_subject_abs_sum(model, subject, pred)
+        print(f'For subject {subject}, the abs(sum) error is {error}')
+
 if __name__ == '__main__':
     # model name (to save to data dir)
-    version = "v2_exhaustive_iter_full_1029"
-    main(version=version)
+    # version = "v2_exhaustive_iter_full_1029"
+    # main(version=version)
+    TEST_check_last_groups_values()
