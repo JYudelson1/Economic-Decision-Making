@@ -12,7 +12,7 @@ fullnames = {
     "tw": "time window"
 }
 
-def spreadsheet_main(version: str, filename: str) -> None:
+def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> None:
 
     # Load model
     with open(version, "rb") as f:
@@ -80,9 +80,15 @@ def spreadsheet_main(version: str, filename: str) -> None:
 
         paramsheet.cell(row=current_row_param, column=err_col, value=round(error, 3))
 
-        all_fits = model.all_best_fits[s]
-        for good_fit in all_fits:
-            # save only the free params
+        if use_all_fits:
+            all_fits = model.all_best_fits[s]
+            for good_fit in all_fits:
+                # save only the free params
+                for i, param in enumerate(good_fit.free_params):
+                    # Rounding just to remove floating point error
+                    paramsheet[current_row_param][i+1].value = str(round(getattr(good_fit,param), 3))
+                current_row_param += 1
+        else:
             for i, param in enumerate(fit.free_params):
                 # Rounding just to remove floating point error
                 paramsheet[current_row_param][i+1].value = str(round(getattr(fit,param), 3))
