@@ -1,9 +1,9 @@
-from pt_predictor import *
-import pickle as pkl
+from ev_based_model import *
+import pt_predictor
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-class PT_TWModel(PTModel):
+class PT_TWModel(pt_predictor.PTModel):
     """This model implements the predictions of Prospect Theory,
     with Arnold Glass's Time Window"""
 
@@ -27,7 +27,7 @@ def main(version: str) -> None:
     #model.simulated_annealing_fit(start_fit=start_fit, verbose=True, error_type=error_type)
     #model.exhaustive_fit(precision=0.2, verbose=True, error_type=error_type)
 
-    precisions = (0.1, 0.01, 0.001)
+    precisions = (0.125, 0.05, 0.01, 0.0025, 0.001)
     model.iterative_exhaustive_search(precisions, verbose=True, start=True)
 
     # Print
@@ -39,5 +39,5 @@ def main(version: str) -> None:
 
 if __name__ == '__main__':
     # model name (to save to data dir)
-    version = "exhaustive_iter_full_1029"
+    version = "exhaustive_iter_1030"
     main(version=version)
