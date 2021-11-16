@@ -3,6 +3,8 @@ import numpy as np
 from math import exp
 from ev_based_model import *
 import pickle as pkl
+from HPTTW_utils import Parameters
+from eut_predictor import EUTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -15,7 +17,7 @@ class HPTTWModel(EVModel):
         self.free_params: list[str] = ["xg", "xl", "g", "l", "tw"]
 
     @lru_cache(maxsize=CACHE_SIZE)
-    def get_psalesj(self, j, tw):
+    def get_psalesj(self, j, tw, day):
         """Finds psales,j that is plugged into Prelec funtion"""
         psalesj: float = 0
         for k in range(day - 2, -1 + (68 - tw), -1):
@@ -38,22 +40,22 @@ class HPTTWModel(EVModel):
         price = int(price)
         n = int(n)
         for j in range(1, price):
-            psalesj += self.get_psalesj(j, fit.tw) * p(j)
+            psalesj += self.get_psalesj(j, fit.tw, day) * p(j)
             wp = prelec(psalesj, fit.g)
-            minuend += (wp * (n * (price - j))) / (1 + (n * price - j)) * fit.xg)
+            minuend += (wp * (n * (price - j))) / (1 + (n * (price - j)) * fit.xg)
 
         subtrahend = 0.0
         price = int(price)
         n = int(n)
         for j in range(price + 1, 16):
-            psalesj = self.get_psalesj(j, fit.tw) * p(j)
+            psalesj = self.get_psalesj(j, fit.tw, day) * p(j)
             wp = prelec(psalesj, fit.g)
             subtrahend += (wp * fit.l * (n * (j - price))) / (1 + (n * (price - j) * fit.xl))
         ev = minuend - subtrahend
         return ev
 
     @lru_cache(maxsize=CACHE_SIZE)
-    def expected_value_day_2(self, price: int, n: int, fit: Parameters):
+    def expected_value_day_2(self, price: int, n: int, fit: Parameters, cutoffs: Tuple[int]):
         minuend = 0.0
         price = int(price)
         n = int(n)
@@ -95,6 +97,38 @@ def main() -> None:
     with open(f'{DATA_DIR}/hpt_{version}.pkl', "wb") as f:
         pkl.dump(model, f)
 
+def TEST_check_for_eut() -> None:
+    """If PT is coded properly, when a=b=g=l=1.0, it should collapse
+    to the predictions of EUT. This function, when run, simply asserts that this is true."""
+    # Error type can be "absolute" or "proportional"
+    error_type = "proportional"
+
+    # Initialize model
+    hpt_model = HPTTWModel()
+
+    for subject in range(hpt_model.num_subjects):
+        hpt_model.best_fits[subject] = Parameters(xl=0, xg=0, g=1.0, l=1.0, tw=68)
+
+    hpt_mean_error = hpt_model.finalize_and_mean_error(error_type=error_type)
+    hpt_std_deviation = hpt_model.std_dev_of_error(error_type=error_type)
+
+    eut_model = EUTModel()
+    eut_mean_error = eut_model.finalize_and_mean_error(error_type=error_type)
+    eut_std_deviation = eut_model.std_dev_of_error(error_type=error_type)
+
+    # Prints
+    print(f'hpt mean_error = {hpt_mean_error}')
+    print(f'hpt std_dev = {hpt_std_deviation}')
+    print(f'eut mean_error = {eut_mean_error}')
+    print(f'eut std_dev = {eut_std_deviation}')
+
+    eut_errors: List[float] = eut_model.mean_error_all_subjects(error_type,
+                                                           False,
+                                                           save_predictions=True)
+
+    for subject in trange(hpt_model.num_subjects):
+        assert list(hpt_model.data.loc[subject]['prediction']) == list(eut_model.data.loc[subject]['prediction'])
+
 
 if __name__ == '__main__':
-    main()
+    TEST_check_for_eut()
