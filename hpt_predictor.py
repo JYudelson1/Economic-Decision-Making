@@ -56,21 +56,7 @@ class HPTTWModel(EVModel):
 
     @lru_cache(maxsize=CACHE_SIZE)
     def expected_value_day_2(self, price: int, n: int, fit: Parameters, cutoffs: Tuple[int]):
-        minuend = 0.0
-        price = int(price)
-        n = int(n)
-        for j in range(1, price):
-            wp = prelec(p(j), fit.g)
-            minuend += (wp * (n * (price - j))) / (1 + (n * (price - j)) * fit.xg)
-
-        subtrahend = 0.0
-        price = int(price)
-        n = int(n)
-        for j in range(price + 1, 16):
-            wp = prelec(p(j), fit.g)
-            subtrahend += (wp * fit.l * (n * (j - price))) / (1 + (n * (price - j) * fit.xl))
-        ev = minuend - subtrahend
-        return ev
+        return self.expected_value(1, price, n, fit, (1,))
 
 def main() -> None:
     # model name (to save to data dir)
@@ -98,7 +84,7 @@ def main() -> None:
         pkl.dump(model, f)
 
 def TEST_check_for_eut() -> None:
-    """If PT is coded properly, when a=b=g=l=1.0, it should collapse
+    """If HPT is coded properly, when g=l=1.0 & xl=xg=0, it should collapse
     to the predictions of EUT. This function, when run, simply asserts that this is true."""
     # Error type can be "absolute" or "proportional"
     error_type = "proportional"
@@ -127,8 +113,9 @@ def TEST_check_for_eut() -> None:
                                                            save_predictions=True)
 
     for subject in trange(hpt_model.num_subjects):
+        print(list(hpt_model.data.loc[subject]['prediction']))
+        print(list(eut_model.data.loc[subject]['prediction']))
         assert list(hpt_model.data.loc[subject]['prediction']) == list(eut_model.data.loc[subject]['prediction'])
-
 
 if __name__ == '__main__':
     TEST_check_for_eut()
