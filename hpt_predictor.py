@@ -3,8 +3,7 @@ from eut_predictor import EUTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-
-class HPTTWModel(EVModel):
+class HPTModel(EVModel):
     """This model implements the predictions of Prospect Theory, with Arnold Glass's Time Window"""
 
     def __init__(self):
@@ -45,28 +44,23 @@ class HPTTWModel(EVModel):
     def expected_value_day_2(self, price: int, n: int, fit: Parameters, cutoffs: Tuple[int]):
         return self.expected_value(1, price, n, fit, (1,))
 
-def main() -> None:
-    # model name (to save to data dir)
-    version = "exhaustive_0-5_930_prop"
+def main(version: str) -> None:
 
-    # Error type can be "absolute" or "proportional"
-    error_type = "proportional"
+    ### Initialize model
+    model = HPTModel()
 
-    # Initialize model
-    model = HPTTWModel()
-
-    # Run fitting
+    ### Run fitting
     model.exhaustive_fit(precision=0.5, verbose=True)
 
     mean_error = model.finalize_and_mean_error()
     std_deviation = model.std_dev_of_error()
 
-    # Prints
+    ### Prints
     print(f'mean_error = {mean_error}')
     print(f'std_dev = {std_deviation}')
     print(model.data)
 
-    # Saves data
+    ### Saves data
     with open(f'{DATA_DIR}/hpt_{version}.pkl', "wb") as f:
         pkl.dump(model, f)
 
@@ -77,7 +71,7 @@ def TEST_check_for_eut() -> None:
     error_type = "proportional"
 
     # Initialize model
-    hpt_model = HPTTWModel()
+    hpt_model = HPTModel()
 
     for subject in range(hpt_model.num_subjects):
         hpt_model.best_fits[subject] = Parameters(xl=0, xg=0, g=1.0, l=1.0, tw=68)
@@ -105,5 +99,8 @@ def TEST_check_for_eut() -> None:
     print("HPT is equivalent to EUT when g==l==1.0 & xl==xg==0!")
 
 if __name__ == '__main__':
+    ### Model name (to save to data dir)
+    version = "exhaustive_0-5_930_prop"
+
     TEST_check_for_eut()
-    main()
+    main(version=version)
