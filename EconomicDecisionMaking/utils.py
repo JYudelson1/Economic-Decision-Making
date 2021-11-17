@@ -15,7 +15,6 @@ from functools      import lru_cache
 from warnings       import catch_warnings, simplefilter
 
 ## Constants
-
 DATA_DIR   = os.path.dirname(os.path.abspath(__file__)) + "/data"
 CACHE_SIZE = 10 ** 6
 NUM_DAYS   = 68
@@ -25,7 +24,6 @@ EPS        = np.finfo(float).eps
 PARAM_LIST = ("a", "b", "xg", "xl", "g", "l", "tw")
 
 ## Utility Classes
-
 class Parameters():
     """A data class to hold values for free parameters"""
 
@@ -76,7 +74,6 @@ class Parameters():
         return Parameters(*self.tuplify())
 
 ## Utility functions
-
 def get_full_data() -> pd.DataFrame:
     """
     Gets full experiment data as DataFrame. Sorted first by subject #, then by day.
