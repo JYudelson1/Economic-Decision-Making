@@ -16,7 +16,7 @@ Below are the files in the project, along with a few functions each contains. Th
     - ```get_full_data()```
     - ```get_valid_param_ranges()```
     - ```p()```
-    - ``get_all_neighbors()```
+    - ```get_all_neighbors()```
     - ```prelec()```
   - Contains a couple of constants
   - Contains implementation of the Parameters class
@@ -26,10 +26,11 @@ Below are the files in the project, along with a few functions each contains. Th
     - This is the most general model, and the base class for all others
     - Includes many search functions for generating best fits, including:
       - Exhaustive search (all options)
-      - Iterative exhaustive search (narrowing in on the correct values)
+      - **Iterative exhaustive search (narrowing in on the correct values)**
+        - Currently in use.
       - Basinhopping (simulated annealing search)
       - BFS fit (Starting at a given fit, travels to all better neighbors)
-      - Etc...
+      - Etc.
     - Includes functions for determining errors
 - ```ev_based_model.py```:
   - Implements ```EVModel``` class
@@ -44,7 +45,9 @@ Below are the files in the project, along with a few functions each contains. Th
   - Implements ```PTModel``` class
   - Explicitly implements expected value function for prospect theory
   - NOTE: This is now a subclass of ```EVModel```, not ```PredictionModel```.
-
+- hpt_predictor.py
+    - Implements ```HPTTWModel``` class
+    - Explicitly implements expected value function for hyperbolic prospect theory
 
 ## Cutoff Information:
 
