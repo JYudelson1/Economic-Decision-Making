@@ -127,8 +127,6 @@ def main(version: str) -> None:
 def TEST_check_for_eut() -> None:
     """If PT is coded properly, when a=b=g=l=1.0, it should collapse
     to the predictions of EUT. This function, when run, simply asserts that this is true."""
-    # Error type can be "absolute" or "proportional"
-    error_type = "proportional"
 
     # Initialize model
     pt_model = PTModel()
@@ -136,12 +134,12 @@ def TEST_check_for_eut() -> None:
     for subject in range(pt_model.num_subjects):
         pt_model.best_fits[subject] = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
 
-    pt_mean_error     = pt_model.finalize_and_mean_error(error_type=error_type)
-    pt_std_deviation  = pt_model.std_dev_of_error(error_type=error_type)
+    pt_mean_error     = pt_model.finalize_and_mean_error()
+    pt_std_deviation  = pt_model.std_dev_of_error()
 
     eut_model = EUTModel()
-    eut_mean_error    = eut_model.finalize_and_mean_error(error_type=error_type)
-    eut_std_deviation = eut_model.std_dev_of_error(error_type=error_type)
+    eut_mean_error    = eut_model.finalize_and_mean_error()
+    eut_std_deviation = eut_model.std_dev_of_error()
 
     # Prints
     print(f'pt mean_error = {pt_mean_error}')
@@ -149,8 +147,7 @@ def TEST_check_for_eut() -> None:
     print(f'eut mean_error = {eut_mean_error}')
     print(f'eut std_dev = {eut_std_deviation}')
 
-    eut_errors: List[float] = eut_model.mean_error_all_subjects(error_type,
-                                                           False,
+    eut_errors: List[float] = eut_model.mean_error_all_subjects(verbose=False,
                                                            save_predictions=True)
 
     for subject in trange(pt_model.num_subjects):
@@ -160,4 +157,4 @@ if __name__ == '__main__':
     ### model name (to save to data dir)
     # version = "v2_exhaustive_iter_full_1029"
     # main(version=version)
-    pass
+    TEST_check_for_eut()
