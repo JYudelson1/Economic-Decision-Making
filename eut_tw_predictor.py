@@ -20,34 +20,34 @@ class EUTModel(PredictionModel):
         predictions_tw50: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[0], subject_data['stored'], 0)
         predictions_tw25: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[1], subject_data['stored'], 0)
         predictions_tw15: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[2], subject_data['stored'], 0)
-        predictions_tw9: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[3], subject_data['stored'], 0)
-        predictions_tw6: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[4], subject_data['stored'], 0)
-        predictions_tw5: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[5], subject_data['stored'], 0)
-        predictions_tw4: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[6], subject_data['stored'], 0)
-        predictions_tw3: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[7], subject_data['stored'], 0)
-        predictions_tw2: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[8], subject_data['stored'], 0)
+        predictions_tw9:  List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[3], subject_data['stored'], 0)
+        predictions_tw6:  List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[4], subject_data['stored'], 0)
+        predictions_tw5:  List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[5], subject_data['stored'], 0)
+        predictions_tw4:  List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[6], subject_data['stored'], 0)
+        predictions_tw3:  List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[7], subject_data['stored'], 0)
+        predictions_tw2:  List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[8], subject_data['stored'], 0)
 
         predictions_per_participant = {} #Create dictionary
         predictions_per_participant['tw50'] = predictions_tw50
         predictions_per_participant['tw25'] = predictions_tw25
         predictions_per_participant['tw15'] = predictions_tw15
-        predictions_per_participant['tw9'] = predictions_tw9
-        predictions_per_participant['tw6'] = predictions_tw6
-        predictions_per_participant['tw5'] = predictions_tw5
-        predictions_per_participant['tw4'] = predictions_tw4
-        predictions_per_participant['tw3'] = predictions_tw3
-        predictions_per_participant['tw2'] = predictions_tw2
+        predictions_per_participant['tw9']  = predictions_tw9
+        predictions_per_participant['tw6']  = predictions_tw6
+        predictions_per_participant['tw5']  = predictions_tw5
+        predictions_per_participant['tw4']  = predictions_tw4
+        predictions_per_participant['tw3']  = predictions_tw3
+        predictions_per_participant['tw2']  = predictions_tw2
 
         error_per_participant = {} #Create dictionary
         error_per_participant['tw50'] = self.mean_error_one_subject_proportion(subject, predictions_tw50)
         error_per_participant['tw25'] = self.mean_error_one_subject_proportion(subject, predictions_tw25)
         error_per_participant['tw15'] = self.mean_error_one_subject_proportion(subject, predictions_tw15)
-        error_per_participant['tw9'] = self.mean_error_one_subject_proportion(subject, predictions_tw9)
-        error_per_participant['tw6'] = self.mean_error_one_subject_proportion(subject, predictions_tw6)
-        error_per_participant['tw5'] = self.mean_error_one_subject_proportion(subject, predictions_tw5)
-        error_per_participant['tw4'] = self.mean_error_one_subject_proportion(subject, predictions_tw4)
-        error_per_participant['tw3'] = self.mean_error_one_subject_proportion(subject, predictions_tw3)
-        error_per_participant['tw2'] = self.mean_error_one_subject_proportion(subject, predictions_tw2)
+        error_per_participant['tw9']  = self.mean_error_one_subject_proportion(subject, predictions_tw9)
+        error_per_participant['tw6']  = self.mean_error_one_subject_proportion(subject, predictions_tw6)
+        error_per_participant['tw5']  = self.mean_error_one_subject_proportion(subject, predictions_tw5)
+        error_per_participant['tw4']  = self.mean_error_one_subject_proportion(subject, predictions_tw4)
+        error_per_participant['tw3']  = self.mean_error_one_subject_proportion(subject, predictions_tw3)
+        error_per_participant['tw2']  = self.mean_error_one_subject_proportion(subject, predictions_tw2)
 
         min_error = min(error_per_participant.values())
         print(min_error)
@@ -67,10 +67,10 @@ class EUTModel(PredictionModel):
 
 if __name__ == '__main__':
 
-    # Initilize model
+    ### Initialize model
     model = EUTModel()
 
-    # Finalizes predictions
+    ### Finalizes predictions
     mean_error = model.finalize_and_mean_error()
     print(f'mean_error = {mean_error}')
     print(model.data)

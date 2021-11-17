@@ -1,6 +1,5 @@
 from utils import *
 
-
 class PredictionModel():
     """A model that uses the experiment data to generate predictions."""
 

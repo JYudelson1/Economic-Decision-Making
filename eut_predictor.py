@@ -23,10 +23,10 @@ class EUTModel(PredictionModel):
 
 if __name__ == '__main__':
 
-    # Initilize model
+    ### Initialize model
     model = EUTModel()
 
-    # Finalizes predictions
+    ### Finalizes predictions
     mean_error = model.finalize_and_mean_error()
     print(f'mean_error = {mean_error}')
     print(model.data)
