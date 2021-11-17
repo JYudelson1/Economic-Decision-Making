@@ -1,8 +1,11 @@
 import pickle as pkl
 from openpyxl import Workbook #type: ignore
 from openpyxl.styles import Font, Alignment #type: ignore
-from pt_predictor import *
-#from hpt_predictor import *
+from utils import *
+from ev_based_model import EVModel
+from pt_predictor import PTModel
+from hpt_predictor import HPTTWModel
+from eut_predictor import EUTModel
 
 fullnames = {
     "a": "alpha",
