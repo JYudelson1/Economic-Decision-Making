@@ -1,9 +1,4 @@
-import pandas as pd
-import numpy as np
-from math import exp
 from ev_based_model import *
-import pickle as pkl
-from HPTTW_utils import Parameters
 from eut_predictor import EUTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -14,13 +9,13 @@ class HPTTWModel(EVModel):
 
     def __init__(self):
         super().__init__()
-        self.free_params: list[str] = ["xg", "xl", "g", "l", "tw"]
+        self.free_params: list[str] = ["xg", "xl", "g", "l"]
 
     @lru_cache(maxsize=CACHE_SIZE)
-    def get_psalesj(self, j, tw, day):
+    def get_psalesj(self, j, tw, day, cutoffs):
         """Finds psales,j that is plugged into Prelec funtion"""
         psalesj: float = 0
-        for k in range(day - 2, -1 + (68 - tw), -1):
+        for k in range(0, day - 1):
             ph: float = 0
             for h in range(1, j):
                 ph += p(h)
@@ -28,29 +23,21 @@ class HPTTWModel(EVModel):
         return psalesj
 
     @lru_cache(maxsize=CACHE_SIZE)
-    def prelec(self, p: float, g: float) -> float:
-        """Prelec function"""
-        neg_log: float = -np.log(p + np.finfo(float).eps)
-        return exp(-(neg_log ** g))
-
-    @lru_cache(maxsize=CACHE_SIZE)
     def expected_value(self, day: int, price: int, n: int, fit: Parameters, cutoffs: Tuple[int]):
-        psalesj = 0
         minuend = 0.0
-        price = int(price)
-        n = int(n)
+
         for j in range(1, price):
-            psalesj += self.get_psalesj(j, fit.tw, day) * p(j)
+            psalesj = self.get_psalesj(j, fit.tw, day, cutoffs) * p(j)
             wp = prelec(psalesj, fit.g)
-            minuend += (wp * (n * (price - j))) / (1 + (n * (price - j)) * fit.xg)
+            minuend += (wp * n * (price - j)) / (1 + (n * (price - j)) * fit.xg)
 
         subtrahend = 0.0
-        price = int(price)
-        n = int(n)
+
         for j in range(price + 1, 16):
-            psalesj = self.get_psalesj(j, fit.tw, day) * p(j)
+            psalesj = self.get_psalesj(j, fit.tw, day, cutoffs) * p(j)
             wp = prelec(psalesj, fit.g)
-            subtrahend += (wp * fit.l * (n * (j - price))) / (1 + (n * (price - j) * fit.xl))
+            subtrahend += (wp * fit.l * n * (j - price)) / (1 + (n * (j - price) * fit.xl))
+
         ev = minuend - subtrahend
         return ev
 
@@ -113,9 +100,10 @@ def TEST_check_for_eut() -> None:
                                                            save_predictions=True)
 
     for subject in trange(hpt_model.num_subjects):
-        print(list(hpt_model.data.loc[subject]['prediction']))
-        print(list(eut_model.data.loc[subject]['prediction']))
         assert list(hpt_model.data.loc[subject]['prediction']) == list(eut_model.data.loc[subject]['prediction'])
+
+    print("HPT is equivalent to EUT when g==l==1.0 & xl==xg==0!")
 
 if __name__ == '__main__':
     TEST_check_for_eut()
+    main()

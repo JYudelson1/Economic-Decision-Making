@@ -1,5 +1,6 @@
 from utils import *
 
+
 class PredictionModel():
     """A model that uses the experiment data to generate predictions."""
 
@@ -205,7 +206,7 @@ class PredictionModel():
         # Remove data on non-free params:
         ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params
                                                                  else [None]
-                                                                 for param in ("a", "b", "g", "l", "tw") ]
+                                                                 for param in PARAM_LIST ]
 
         # Get all possible values via cartesian product
         all_possible_fits = product(*ranges)
@@ -222,6 +223,9 @@ class PredictionModel():
             # Skip fits where a > b
             if fit[0] is not None and fit[1] is not None and fit[0] > fit[1]:
                 continue
+            # Keep fits where xl-.1 <= xg <= xl
+            if (fit[2] is not None and fit[3] is not None) and (fit[2] > fit[3] or fit[2] < fit[3]-0.1):
+                continue
 
             # Predict sale amounts based on fit
             fit_params: Parameters = Parameters(*fit)
@@ -236,7 +240,9 @@ class PredictionModel():
                 best_fit = fit_params
                 self.all_best_fits[subject] = [fit_params]
             elif error == lowest_error:
-                if fit_params.a >= best_fit.a:
+                if fit_params.a is not None and fit_params.a >= best_fit.a:
+                    best_fit = fit_params
+                elif not fit_params.a:
                     best_fit = fit_params
                 self.all_best_fits[subject].append(fit_params)
 
@@ -293,6 +299,16 @@ class PredictionModel():
                             high(prev_best_fit.b, prev_precision, 1) + EPS,
                             precision
                 )),
+            "xg": list(np.arange(
+                            low(prev_best_fit.a, prev_precision, precision),
+                            high(prev_best_fit.a, prev_precision, 1) + EPS,
+                            precision
+                )),
+            "xl": list(np.arange(
+                            low(prev_best_fit.b, prev_precision, precision),
+                            high(prev_best_fit.b, prev_precision, 1) + EPS,
+                            precision
+                )),
             "g": list(np.arange(
                             low(prev_best_fit.g, prev_precision, precision),
                             high(prev_best_fit.g, prev_precision, 1) + EPS,
@@ -309,7 +325,7 @@ class PredictionModel():
         # Remove data on non-free params:
         ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params
                                                                  else [None]
-                                                                 for param in ("a", "b", "g", "l", "tw") ]
+                                                                 for param in PARAM_LIST ]
 
         # Get all possible values via cartesian product
         all_possible_fits = product(*ranges)
@@ -326,6 +342,9 @@ class PredictionModel():
             # Skip fits where a > b
             if fit[0] is not None and fit[1] is not None and fit[0] > fit[1]:
                 continue
+            # Keep fits where xl-.1 <= xg <= xl
+            if (fit[2] is not None and fit[3] is not None) and (fit[2] > fit[3] or fit[2] < fit[3]-0.1):
+                continue
 
             # Predict sale amounts based on fit
             fit_params: Parameters = Parameters(*fit)
@@ -340,7 +359,9 @@ class PredictionModel():
                 best_fit = fit_params
                 self.all_best_fits[subject] = [fit_params]
             elif error == lowest_error:
-                if fit_params.a >= best_fit.a:
+                if fit_params.a is not None and fit_params.a >= best_fit.a:
+                    best_fit = fit_params
+                elif not fit_params.a:
                     best_fit = fit_params
                 self.all_best_fits[subject].append(fit_params)
 

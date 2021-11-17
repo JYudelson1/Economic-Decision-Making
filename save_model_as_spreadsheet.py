@@ -9,7 +9,9 @@ fullnames = {
     "b": "beta",
     "g": "gamma",
     "l": "lambda",
-    "tw": "time window"
+    "tw": "tw",
+    "xl": "chi-loss",
+    "xg": "chi-gain"
 }
 
 def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> None:
@@ -34,9 +36,17 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
                                                   max_row = 1)):
         if i >= len(model.free_params):
             break
-        cell[0].value = fullnames[model.free_params[i]]
+        cell[0].value = fullnames[model.free_params[i]] + "New"
         err_col += 1
-    paramsheet[f'A{err_col}'] = "Errors"
+    paramsheet.cell(row=1, column=err_col, value="ErrorsNew")
+    paramsheet.cell(row=1, column=err_col + 1, value="ErrorsOld")
+    for i, cell in enumerate(paramsheet.iter_cols(min_col = err_col + 2,
+                                                  max_col = err_col + 5,
+                                                  min_row = 1,
+                                                  max_row = 1)):
+        if i >= len(model.free_params):
+            break
+        cell[0].value = fullnames[model.free_params[i]] + "Old"
 
     # Add headers to second sheet
     predsheet["A1"] = "Subject"

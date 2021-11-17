@@ -14,54 +14,59 @@ from warnings import catch_warnings, simplefilter
 ## Constants
 
 DATA_DIR = "data"
-CACHE_SIZE = None
+CACHE_SIZE = 10 ** 6
 NUM_DAYS = 68
 TW_FACTOR = NUM_DAYS
 L_FACTOR = 1
 EPS = np.finfo(float).eps
+PARAM_LIST = ("a", "b", "xg", "xl", "g", "l", "tw")
 
 ## Utility Classes
 
 class Parameters():
     """A data class to hold values for free parameters"""
 
-    __slots__ = ['a', 'b', 'g', 'l', 'tw', 'free_params']
+    __slots__ = ['a', 'b', 'xg', 'xl', 'g', 'l', 'tw', 'free_params']
 
     def __init__(self, a = None,
                         b = None,
+                        xg = None,
+                        xl = None,
                         g = None,
                         l = None,
                         tw = None):
         self.a: float = a
         self.b: float = b
+        self.xl: float = xl
+        self.xg: float = xg
         self.g: float = g
         self.l: float = l
         self.tw: int = tw
 
         # Store a list of the free parameters
-        self.free_params: List[str] = [param for param in ("a", "b", "g", "l", "tw")
+        self.free_params: List[str] = [param for param in PARAM_LIST
                                                     if getattr(self, param) != None]
 
     def __eq__(self, other):
         """Check if two Parameter objects store equivalent info"""
         if not isinstance(other, Parameters):
             return False
-        for param in ("a", "b", "g", "l", "tw"):
+        for param in PARAM_LIST:
             if getattr(self, param) != getattr(other, param):
                 return False
         return True
 
     def __repr__(self):
         """String representation of Parameter object"""
-        return f'Parameters(a={self.a},b={self.b},g={self.g},l={self.l},tw={self.tw})'
+        return f'Parameters(a={self.a},b={self.b},xg={self.xg},xl={self.xl},g={self.g},l={self.l},tw={self.tw})'
 
     def __hash__(self):
         """Make Parameters hashable, and allow identical params to hash to same locations"""
-        return (self.a, self.b, self.g, self.l, self.tw).__hash__()
+        return (self.a, self.b, self.xg, self.xl, self.g, self.l, self.tw).__hash__()
 
     def tuplify(self):
         """Return all info as a tuple"""
-        return (self.a, self.b, self.g, self.l, self.tw)
+        return (self.a, self.b, self.xg, self.xl, self.g, self.l, self.tw)
 
     def deepcopy(self):
         """Returns a deepcopied Parameters object with the same values as self"""
@@ -113,10 +118,12 @@ def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
     Inputs:
         precision: the amount to increment each value when iterating through all possible values."""
     valid_parameter_ranges: Dict[str, List[float]] = {
-        "a": list(np.arange(precision, 1 + EPS, precision)),
-        "b": list(np.arange(precision, 1 + EPS, precision)),
-        "g": list(np.arange(precision, 1 + EPS, precision)),
-        "l": list(np.arange(1, 2 + EPS, precision)),
+        "a":  list(np.arange(precision, 1 + EPS, precision)),
+        "b":  list(np.arange(precision, 1 + EPS, precision)),
+        "xg": list(np.arange(precision, 1 + EPS, precision)),
+        "xl": list(np.arange(precision, 1 + EPS, precision)),
+        "g":  list(np.arange(precision, 1 + EPS, precision)),
+        "l":  list(np.arange(1, 2 + EPS, precision)),
         "tw": list(np.arange(2, NUM_DAYS, 1))
     }
     return valid_parameter_ranges
@@ -137,7 +144,7 @@ def get_all_neighbors(current: Optional[Parameters], precision: float) -> Any:
     ranges : List[List[Union[float, int]]] = []
     params: List[str] = current.free_params
 
-    for param in ["a", "b", "g"]:
+    for param in ["a", "b", "xg", "xl", "g"]:
         if param in params:
             current_val = getattr(current, param)
             range: List[float] = [current_val]
