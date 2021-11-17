@@ -1,4 +1,4 @@
-# Economic-Decision-Making
+# Economic Decision Making
 
 ## Getting Started
 
@@ -7,9 +7,12 @@ To install requirements, go to the main directory and run
 pip install -r requirements.txt
 ```
 
+The easiest way to run a model is to run one of the ```full_procedure``` python files, from the ```procedures``` directory.
+Just change the version string in the procedure file, and that will automatically run the fitting and save the output in ```EconomicDecisionMaking/data```
+
 ## File Directory:
 
-Below are the files in the project, along with a few functions each contains. This may be a bit behind the latest updates, but it's a good idea to at least generally have an idea of what happens in each file.
+Below are the files in ```EconomicDecisionMaking```, along with a few functions each contains. This may be a bit behind the latest updates, but it's a good idea to at least generally have an idea of what happens in each file.
 
 - ```utils.py```:
   - Contains various utility functions
@@ -21,7 +24,7 @@ Below are the files in the project, along with a few functions each contains. Th
   - Contains a couple of constants
   - Contains implementation of the Parameters class
     - Which bundles together parameter values for models
-- ```prediction_model.py```:
+- ```models/prediction_model.py```:
   - Implements ```PredictionModel``` class  
     - This is the most general model, and the base class for all others
     - Includes many search functions for generating best fits, including:
@@ -32,20 +35,20 @@ Below are the files in the project, along with a few functions each contains. Th
       - BFS fit (Starting at a given fit, travels to all better neighbors)
       - Etc.
     - Includes functions for determining errors
-- ```ev_based_model.py```:
+- ```models/ev_based_model.py```:
   - Implements ```EVModel``` class
     - This is a model which determines cutoff prices based on an explicit expected value function. I think this is the case for most of the models mentioned in the report.
     - Implements a dummy ```expected_value()``` function
     - Implements a ```predict_one_subject()``` function
     - Implements a ```generate_cutoffs()``` function
     - NOTE: Any subclass of this should only need to implement an ```expected_value()``` and a ```main``` function.
-- ```eut_predictor.py```
+- ```models/eut_predictor.py```
   - Implements ```EUTModel``` class
-- pt_predictor.py
+- ```models/pt_predictor.py```
   - Implements ```PTModel``` class
   - Explicitly implements expected value function for prospect theory
   - NOTE: This is now a subclass of ```EVModel```, not ```PredictionModel```.
-- hpt_predictor.py
+- ```models/hpt_predictor.py```
     - Implements ```HPTTWModel``` class
     - Explicitly implements expected value function for hyperbolic prospect theory
 
