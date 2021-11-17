@@ -72,22 +72,19 @@ However, note that the expected value also depends on the cutoffs. This seems ci
 The following is the annotated main function for ```pt_predictor.py```. I think it's a good base for the other models:
 
 ```
-if __name__ == '__main__':
+def main(version: str) -> None:
 
-    # model name (to save to data dir)
-    version = "exhaustive_iter_full_1029"
-
-    # Initialize model
+    ### Initialize model
     model = PTModel()
 
-    # Run fitting
-    precisions = (0.1, 0.01, 0.001)
+    ### Run fitting
+    precisions = (0.05, 0.01, 0.001)
     model.iterative_exhaustive_search(precisions, verbose=True, start=True)
 
-    # Finalizes predictions and prints
-    mode.print_info()
+    ### Print
+    model.print_info()
 
-    # Saves data
+    ### Saves data
     with open(f'{DATA_DIR}/pt_{version}.pkl', "wb") as f:
         pkl.dump(model, f)
 
