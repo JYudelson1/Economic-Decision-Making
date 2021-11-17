@@ -4,10 +4,9 @@ class EVModel(PredictionModel):
     """Any model other than EUT can be simplified down to an expected value function.
     The only difference between e.g. PT and HPT is the expected value function
         (As far as I can tell. If this later turns out to be false we can rebase.)
-    NOTE: As of now, this doesn't support time windows, even abstractly.
-          Presumably, that'll just be a change in the cutoff generation function,
-          in which case you can overwrite that function or we can add
-          a new parameter to this one."""
+    NOTE: Time windows are implicitly supported, as the only effect is a change in
+        in the generate_cutoffs function. This occurs if and only if
+        the model has tw in its free_params"""
 
     def __init__(self):
         super().__init__()
@@ -18,7 +17,7 @@ class EVModel(PredictionModel):
         # It turns out that cutoff prices depend ONLY on the fit.
         # That is to say, the same fit with the same model should always generate the same cutoff prices.
         Inputs:
-            fit: the Parameters used to calculate the cutoff values. """
+            fit: the Parameters used to calculate the cutoff values."""
         cutoffs: List[int] = [1]
         iter = range(1, self.num_days)
         for day in tqdm(iter, desc=f'Cutoffs', leave=False, disable=True):
