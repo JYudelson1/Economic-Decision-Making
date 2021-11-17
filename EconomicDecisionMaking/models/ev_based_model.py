@@ -1,5 +1,12 @@
-from prediction_model import *
+## Adding package to PATH
+import sys
+from os.path import dirname, abspath
+sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 
+## Imports
+from EconomicDecisionMaking.models.prediction_model import *
+
+## Classes
 class EVModel(PredictionModel):
     """Any model other than EUT can be simplified down to an expected value function.
     The only difference between e.g. PT and HPT is the expected value function

@@ -1,4 +1,10 @@
-from utils import *
+## Adding package to PATH
+import sys
+from os.path import dirname, abspath
+sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
+
+## Imports
+from EconomicDecisionMaking.utils import *
 
 class PredictionModel():
     """A model that uses the experiment data to generate predictions."""

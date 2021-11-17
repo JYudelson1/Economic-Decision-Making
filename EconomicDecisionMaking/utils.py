@@ -1,24 +1,27 @@
-## Imports
+## Adding package to PATH
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+## Imports
 import pandas as pd #type: ignore
-import numpy as np #type: ignore
+import numpy  as np #type: ignore
 import pickle as pkl
 from scipy.optimize import minimize, Bounds, basinhopping #type: ignore
-from math import exp, ceil
-from typing import Optional, Dict, List, Union, Any, Tuple, Generator, Callable, Iterable
-from tqdm import tqdm, trange #type: ignore
-from itertools import product
-from functools import lru_cache
-from warnings import catch_warnings, simplefilter
+from math           import exp, ceil
+from typing         import Optional, Dict, List, Union, Any, Tuple, Generator, Callable, Iterable
+from tqdm           import tqdm, trange #type: ignore
+from itertools      import product
+from functools      import lru_cache
+from warnings       import catch_warnings, simplefilter
 
 ## Constants
 
-DATA_DIR = "data"
+DATA_DIR   = os.path.dirname(os.path.abspath(__file__)) + "/data"
 CACHE_SIZE = 10 ** 6
-NUM_DAYS = 68
-TW_FACTOR = NUM_DAYS
-L_FACTOR = 1
-EPS = np.finfo(float).eps
+NUM_DAYS   = 68
+TW_FACTOR  = NUM_DAYS
+L_FACTOR   = 1
+EPS        = np.finfo(float).eps
 PARAM_LIST = ("a", "b", "xg", "xl", "g", "l", "tw")
 
 ## Utility Classes
@@ -28,20 +31,20 @@ class Parameters():
 
     __slots__ = ['a', 'b', 'xg', 'xl', 'g', 'l', 'tw', 'free_params']
 
-    def __init__(self, a = None,
-                        b = None,
+    def __init__(self, a   = None,
+                        b  = None,
                         xg = None,
                         xl = None,
-                        g = None,
-                        l = None,
+                        g  = None,
+                        l  = None,
                         tw = None):
-        self.a: float = a
-        self.b: float = b
+        self.a:  float = a
+        self.b:  float = b
         self.xl: float = xl
         self.xg: float = xg
-        self.g: float = g
-        self.l: float = l
-        self.tw: int = tw
+        self.g:  float = g
+        self.l:  float = l
+        self.tw: int   = tw
 
         # Store a list of the free parameters
         self.free_params: List[str] = [param for param in PARAM_LIST
@@ -82,8 +85,8 @@ def get_full_data() -> pd.DataFrame:
 
     # Read .csv files
     daily_prices_raw = pd.read_csv(f'{DATA_DIR}/prices.csv')
-    stored_raw = pd.read_csv(f'{DATA_DIR}/stored.csv')
-    sold_raw = pd.read_csv(f'{DATA_DIR}/sold.csv')
+    stored_raw       = pd.read_csv(f'{DATA_DIR}/stored.csv')
+    sold_raw         = pd.read_csv(f'{DATA_DIR}/sold.csv')
 
     # These 3 dataframes are structured the same when imported. This code changes the dataframe to a multilevel index dataframe, so that the first-level index is the participant, and the second-level index is the day
 

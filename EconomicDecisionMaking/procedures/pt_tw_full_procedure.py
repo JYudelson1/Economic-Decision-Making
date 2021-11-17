@@ -1,5 +1,12 @@
-import pt_tw_predictor, save_model_as_spreadsheet
-from utils import DATA_DIR
+## Adding package to PATH
+import sys
+from os.path import dirname, abspath
+sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
+
+## Imports
+import EconomicDecisionMaking.models.pt_tw_predictor as pt_tw_predictor
+import EconomicDecisionMaking.save_model_as_spreadsheet as save_model_as_spreadsheet
+from EconomicDecisionMaking.utils import DATA_DIR
 
 if __name__ == '__main__':
         version = "exhaustive_iter_full_1111"

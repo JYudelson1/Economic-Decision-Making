@@ -1,8 +1,15 @@
-from ev_based_model import *
-from hpt_predictor import HPTModel
+## Adding package to PATH
+import sys
+from os.path import dirname, abspath
+sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
+
+## Imports
+from EconomicDecisionMaking.models.ev_based_model import *
+from EconomicDecisionMaking.models.hpt_predictor import HPTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
+## Classes
 class HPTTWModel(HPTModel):
     """This model implements the predictions of Prospect Theory, with Arnold Glass's Time Window"""
 
