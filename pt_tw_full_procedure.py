@@ -2,7 +2,7 @@ import pt_tw_predictor, save_model_as_spreadsheet
 from utils import DATA_DIR
 
 if __name__ == '__main__':
-        version = "exhaustive_iter_full_111"
+        version = "exhaustive_iter_full_1111"
 
         pt_tw_predictor.main(version=version)
 
