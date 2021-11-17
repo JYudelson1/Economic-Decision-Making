@@ -1,5 +1,5 @@
 from ev_based_model import *
-from eut_predictor import *
+from eut_predictor import EUTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -96,19 +96,16 @@ class PTModel(EVModel):
 
 def main(version: str) -> None:
 
-    # Error type can be "absolute" or "proportional"
-    error_type = "proportional"
-
     # Initialize model
     model = PTModel()
 
     # Run fitting
     #start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
-    #model.minimize_fit(start_fit=start_fit, verbose=True, error_type=error_type, method="Nelder-Mead")
-    #model.bfs_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
-    #model.greedy_fit(verbose=True, precision=0.1, error_type=error_type, start_fit=start_fit)
-    #model.simulated_annealing_fit(start_fit=start_fit, verbose=True, error_type=error_type)
-    #model.exhaustive_fit(precision=0.2, verbose=True, error_type=error_type)
+    #model.minimize_fit(start_fit=start_fit, verbose=True, method="Nelder-Mead")
+    #model.bfs_fit(verbose=True, precision=0.05, start_fit=start_fit)
+    #model.greedy_fit(verbose=True, precision=0.1, start_fit=start_fit)
+    #model.simulated_annealing_fit(start_fit=start_fit, verbose=True)
+    #model.exhaustive_fit(precision=0.2, verbose=True)
 
     precisions = (0.05, 0.01, 0.001)
     model.iterative_exhaustive_search(precisions, verbose=True, start=True)
@@ -193,7 +190,7 @@ def TEST_check_last_groups_values() -> None:
         print(f'For subject {subject}, the abs(sum) error is {error}')
 
 if __name__ == '__main__':
-    # model name (to save to data dir)
+    ### model name (to save to data dir)
     # version = "v2_exhaustive_iter_full_1029"
     # main(version=version)
-    TEST_check_last_groups_values()
+    pass

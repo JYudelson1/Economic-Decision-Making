@@ -37,7 +37,7 @@ class EUTModel(PredictionModel):
         predictions_per_participant['tw4'] = predictions_tw4
         predictions_per_participant['tw3'] = predictions_tw3
         predictions_per_participant['tw2'] = predictions_tw2
-        
+
         error_per_participant = {} #Create dictionary
         error_per_participant['tw50'] = self.mean_error_one_subject_proportion(subject, predictions_tw50)
         error_per_participant['tw25'] = self.mean_error_one_subject_proportion(subject, predictions_tw25)
@@ -49,10 +49,10 @@ class EUTModel(PredictionModel):
         error_per_participant['tw3'] = self.mean_error_one_subject_proportion(subject, predictions_tw3)
         error_per_participant['tw2'] = self.mean_error_one_subject_proportion(subject, predictions_tw2)
 
-        min_error = min(error_per_participant.values()) 
-        print(min_error) 
-        ideal_key = [k for k, v in error_per_participant.items() if v == min_error] 
-     
+        min_error = min(error_per_participant.values())
+        print(min_error)
+        ideal_key = [k for k, v in error_per_participant.items() if v == min_error]
+
         predictions_all = {}
         for name, value in predictions_per_participant.items():
             if name in ideal_key:
@@ -60,8 +60,8 @@ class EUTModel(PredictionModel):
 
         # This selects the first set of predictions (specifically for those where there are more than one TW that fits), since the predictions should be the same
         predictions = list(predictions_all.values())[0]
-        
-        
+
+
         return predictions
 
 
@@ -69,13 +69,8 @@ if __name__ == '__main__':
 
     # Initilize model
     model = EUTModel()
-    #print(model.data)
+
     # Finalizes predictions
-    # Note: error_type = 'absolute' means that the model will use absolute differences
-    #       between prediction and sale amounts to determine error. error_type = 'proportional'
-    #       would use the difference in proportions of goods sold instead. The second seems to
-    #       be what Glass used in the report, but the numbers in Table 3 seem to suggest
-    #       the usage of absolute difference.
-    mean_error = model.finalize_and_mean_error(error_type="absolute")
+    mean_error = model.finalize_and_mean_error()
     print(f'mean_error = {mean_error}')
     print(model.data)

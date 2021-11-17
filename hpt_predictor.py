@@ -56,10 +56,10 @@ def main() -> None:
     model = HPTTWModel()
 
     # Run fitting
-    model.exhaustive_fit(precision=0.5, verbose=True, error_type=error_type)
+    model.exhaustive_fit(precision=0.5, verbose=True)
 
-    mean_error = model.finalize_and_mean_error(error_type=error_type)
-    std_deviation = model.std_dev_of_error(error_type=error_type)
+    mean_error = model.finalize_and_mean_error()
+    std_deviation = model.std_dev_of_error()
 
     # Prints
     print(f'mean_error = {mean_error}')

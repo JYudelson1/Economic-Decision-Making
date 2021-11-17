@@ -27,11 +27,6 @@ if __name__ == '__main__':
     model = EUTModel()
 
     # Finalizes predictions
-    # Note: error_type = 'absolute' means that the model will use absolute differences
-    #       between prediction and sale amounts to determine error. error_type = 'proportional'
-    #       would use the difference in proportions of goods sold instead. The second seems to
-    #       be what Glass used in the report, but the numbers in Table 3 seem to suggest
-    #       the usage of absolute difference.
-    mean_error = model.finalize_and_mean_error(error_type="absolute")
+    mean_error = model.finalize_and_mean_error()
     print(f'mean_error = {mean_error}')
     print(model.data)

@@ -13,19 +13,16 @@ class PT_TWModel(pt_predictor.PTModel):
 
 def main(version: str) -> None:
 
-    # Error type can be "absolute" or "proportional"
-    error_type = "proportional"
-
     # Initialize model
     model = PT_TWModel()
 
     # Run fitting
     #start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
-    #model.minimize_fit(start_fit=start_fit, verbose=True, error_type=error_type, method="Nelder-Mead")
-    #model.bfs_fit(verbose=True, precision=0.05, error_type=error_type, start_fit=start_fit)
-    #model.greedy_fit(verbose=True, precision=0.1, error_type=error_type, start_fit=start_fit)
-    #model.simulated_annealing_fit(start_fit=start_fit, verbose=True, error_type=error_type)
-    #model.exhaustive_fit(precision=0.2, verbose=True, error_type=error_type)
+    #model.minimize_fit(start_fit=start_fit, verbose=True, method="Nelder-Mead")
+    #model.bfs_fit(verbose=True, precision=0.05, start_fit=start_fit)
+    #model.greedy_fit(verbose=True, precision=0.1, start_fit=start_fit)
+    #model.simulated_annealing_fit(start_fit=start_fit, verbose=True)
+    #model.exhaustive_fit(precision=0.2, verbose=True)
 
     precisions = (0.125, 0.05, 0.01, 0.0025, 0.001)
     model.iterative_exhaustive_search(precisions, verbose=True, start=True)
