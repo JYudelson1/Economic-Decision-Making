@@ -4,12 +4,12 @@ from os.path import dirname, abspath
 sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 
 ## Imports
-import EconomicDecisionMaking.models.pt_predictor as pt_predictor
+import EconomicDecisionMaking.models.pt_predictor       as pt_predictor
 import EconomicDecisionMaking.save_model_as_spreadsheet as save_model_as_spreadsheet
 from EconomicDecisionMaking.utils import DATA_DIR
 
 if __name__ == '__main__':
-        version = "exhaustive_iter_test"
+        version = "exhaustive_iter_full_111"
 
         pt_predictor.main(version=version)
 

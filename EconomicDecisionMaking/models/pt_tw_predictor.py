@@ -5,7 +5,7 @@ sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 
 ## Imports
 from EconomicDecisionMaking.models.ev_based_model import *
-from EconomicDecisionMaking.models.pt_predictor import PTModel
+from EconomicDecisionMaking.models.pt_predictor   import PTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
 

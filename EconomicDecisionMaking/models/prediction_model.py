@@ -14,12 +14,12 @@ class PredictionModel():
 
         # Get experiment data
         self.data: pd.DataFrame = get_full_data()
-        self.num_subjects: int = 1 + self.data.index[-1][0]
-        self.num_days: int = 1 + int(self.data.index[-1][1])
+        self.num_subjects: int  = 1 + self.data.index[-1][0]
+        self.num_days:     int  = 1 + int(self.data.index[-1][1])
 
         # Some models have free parameters. In that case, they vary from subject to subject
         # This is a mapping from subjects to Parameter values
-        self.best_fits: Dict[int, Parameters] = {}
+        self.best_fits:     Dict[int, Parameters] = {}
         self.all_best_fits: Dict[int, List[Parameters]] = {subject: [] for subject in range(self.num_subjects)}
 
         # Set free paramaters based on model type
@@ -67,7 +67,7 @@ class PredictionModel():
             subject: the participant's number in the dataframe.
             predictions: the model's predictions for the number of units to be sold each day by this participant."""
         d_0: int = 0 # Number of days for which the participant had no goods stored
-        total_error: float = 0
+        total_error:  float = 0
         subject_data: pd.DataFrame = self.get_data_one_subject(subject)
 
         # Iterate through the days and sum the error
@@ -184,9 +184,9 @@ class PredictionModel():
         return cutoff_prices
 
     def exhaustive_fit_one_subject(self,
-                                subject: int,
-                                precision: float,
-                                verbose: bool = False,
+                                subject:    int,
+                                precision:  float,
+                                verbose:    bool = False,
                                 error_type: str = "proportional") -> None:
         """Performs the exhaustive fit algorithm for one subject and saves the best fit.
         The exhaustive fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
@@ -199,7 +199,7 @@ class PredictionModel():
                         the difference in proportion of goods sold. report.docx
                         seems to use proportional."""
 
-        lowest_error: float = float('inf')
+        lowest_error: float  = float('inf')
         best_fit: Parameters = Parameters(1, 1, 1, 1, 68)
 
         # Set correct error function
@@ -242,7 +242,7 @@ class PredictionModel():
             # Check if it's the best so far:
             if error < lowest_error:
                 lowest_error = error
-                best_fit = fit_params
+                best_fit     = fit_params
                 self.all_best_fits[subject] = [fit_params]
             elif error == lowest_error:
                 if fit_params.a is not None and fit_params.a >= best_fit.a:
@@ -266,11 +266,11 @@ class PredictionModel():
             self.exhaustive_fit_one_subject(subject, precision, verbose, error_type)
 
     def exhaustive_fit_with_guess_one_subject(self,
-                                subject: int,
-                                precision: float,
+                                subject:        int,
+                                precision:      float,
                                 prev_precision: float,
-                                verbose: bool = False,
-                                error_type: str = "proportional") -> None:
+                                verbose:        bool = False,
+                                error_type:     str = "proportional") -> None:
         """Performs the exhaustive fit algorithm for one subject and saves the best fit.
         The exhaustive fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
         Inputs:
@@ -291,36 +291,36 @@ class PredictionModel():
         error_fn = self.get_error_fn(error_type)
 
         # Get lists of all possible values for all free params
-        low = lambda fit, old_precision, floor: max(floor, fit - old_precision/2) if fit else 0
-        high = lambda fit, old_precision, ceil: min(ceil, fit + old_precision/2) if fit else 0
+        low  = lambda fit, old_precision, floor: max(floor, fit - old_precision/2) if fit else 0
+        high = lambda fit, old_precision, ceil:  min(ceil,  fit + old_precision/2) if fit else 0
         valid_parameter_ranges: Dict[str, List[float]] = {
             "a": list(np.arange(
-                            low(prev_best_fit.a, prev_precision, precision),
+                            low(prev_best_fit.a,  prev_precision, precision),
                             high(prev_best_fit.a, prev_precision, 1) + EPS,
                             precision
                 )),
             "b": list(np.arange(
-                            low(prev_best_fit.b, prev_precision, precision),
+                            low(prev_best_fit.b,  prev_precision, precision),
                             high(prev_best_fit.b, prev_precision, 1) + EPS,
                             precision
                 )),
             "xg": list(np.arange(
-                            low(prev_best_fit.a, prev_precision, precision),
+                            low(prev_best_fit.a,  prev_precision, precision),
                             high(prev_best_fit.a, prev_precision, 1) + EPS,
                             precision
                 )),
             "xl": list(np.arange(
-                            low(prev_best_fit.b, prev_precision, precision),
+                            low(prev_best_fit.b,  prev_precision, precision),
                             high(prev_best_fit.b, prev_precision, 1) + EPS,
                             precision
                 )),
             "g": list(np.arange(
-                            low(prev_best_fit.g, prev_precision, precision),
+                            low(prev_best_fit.g,  prev_precision, precision),
                             high(prev_best_fit.g, prev_precision, 1) + EPS,
                             precision
                 )),
             "l": list(np.arange(
-                            low(prev_best_fit.l, prev_precision, 1),
+                            low(prev_best_fit.l,  prev_precision, 1),
                             high(prev_best_fit.l, prev_precision, 2) + EPS,
                             precision
                 )),
@@ -361,7 +361,7 @@ class PredictionModel():
             # Check if it's the best so far:
             if error < lowest_error:
                 lowest_error = error
-                best_fit = fit_params
+                best_fit     = fit_params
                 self.all_best_fits[subject] = [fit_params]
             elif error == lowest_error:
                 if fit_params.a is not None and fit_params.a >= best_fit.a:
@@ -412,11 +412,11 @@ class PredictionModel():
                 self.mean_error_all_subjects(error_type, False, save_predictions=True)
 
     def greedy_fit_one_subject(self,
-                               subject: int,
-                               precision: float = 0.001,
-                               verbose: bool = False,
+                               subject:    int,
+                               precision:  float = 0.001,
+                               verbose:    bool = False,
                                error_type: str = "proportional",
-                               start_fit: Optional[Parameters] = None) -> None:
+                               start_fit:  Optional[Parameters] = None) -> None:
         """Performs the greedy fit algorithm for one subject and saves the best fit.
         The greedy fit algorithm consists of starting at one spot in the search space
             and exclusively tarveling to the neighbor with the lowest error.
@@ -443,8 +443,8 @@ class PredictionModel():
 
         # Get starting error
         self.best_fits[subject] = start_fit
-        predictions: List[int] = self.predict_one_subject(subject, start_fit)
-        current_error: float = error_fn(subject, predictions)
+        predictions: List[int]  = self.predict_one_subject(subject, start_fit)
+        current_error: float    = error_fn(subject, predictions)
 
         # Changed flag will tell us whether the best fit changes over the course
         # of one iteration of the algorithm. If it doesn't change, then we are
@@ -481,10 +481,10 @@ class PredictionModel():
                     changed = True
 
     def greedy_fit(self,
-                   precision: float = 0.001,
-                   verbose: bool = False,
-                   error_type: str = "proportional",
-                   start_fit: Optional[Parameters] = None) -> None:
+                   precision:  float = 0.001,
+                   verbose:    bool  = False,
+                   error_type: str   = "proportional",
+                   start_fit:  Optional[Parameters] = None) -> None:
         """Does the greedy fit algorithm for all subjects. Modifies in place.
         Inputs:
             precision: the amount to increment each value when traversing the search space.
@@ -498,11 +498,11 @@ class PredictionModel():
             self.greedy_fit_one_subject(subject, precision, verbose, error_type, start_fit)
 
     def bfs_fit_one_subject(self,
-                               subject: int,
-                               precision: float = 0.001,
-                               verbose: bool = False,
-                               error_type: str = "proportional",
-                               start_fit: Optional[Parameters] = None) -> None:
+                               subject:    int,
+                               precision:  float = 0.001,
+                               verbose:    bool  = False,
+                               error_type: str   = "proportional",
+                               start_fit:  Optional[Parameters] = None) -> None:
         """Performs the BFS fit algorithm for one subject and saves the best fit.
         The BFS fit algorithm consists of starting at one spot in the search space
             and eaxploring each neighbor with a lower error..
@@ -527,8 +527,8 @@ class PredictionModel():
         error_fn = self.get_error_fn(error_type)
 
         # Get initial error
-        predictions: List[int] = self.predict_one_subject(subject, start_fit)
-        start_error: float = error_fn(subject, predictions)
+        predictions: List[int]  = self.predict_one_subject(subject, start_fit)
+        start_error: float      = error_fn(subject, predictions)
         self.best_fits[subject] = start_fit
 
         # Keep track of every visited node, along with its error
@@ -577,9 +577,9 @@ class PredictionModel():
                     self.all_best_fits[subject].append(neighbor_fit)
 
     def bfs_fit(self,
-                   precision: float = 0.001,
-                   verbose: bool = False,
-                   error_type: str = "proportional",
+                   precision:  float = 0.001,
+                   verbose:    bool  = False,
+                   error_type: str   = "proportional",
                    start_fit: Optional[Parameters] = None) -> None:
         """Does the BFS fit algorithm for all subjects. Modifies in place.
         Inputs:
@@ -614,7 +614,7 @@ class PredictionModel():
         #       small step size.
         if fit.tw:
             fit.tw = TW_FACTOR * fit.tw
-        predictions = self.predict_one_subject(subject, fit)
+        predictions  = self.predict_one_subject(subject, fit)
         error: float = error_fn(subject, predictions)
         return error
 

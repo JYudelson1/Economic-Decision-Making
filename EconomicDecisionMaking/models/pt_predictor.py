@@ -5,7 +5,7 @@ sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 
 ## Imports
 from EconomicDecisionMaking.models.ev_based_model import *
-from EconomicDecisionMaking.models.eut_predictor import EUTModel
+from EconomicDecisionMaking.models.eut_predictor  import EUTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -136,11 +136,11 @@ def TEST_check_for_eut() -> None:
     for subject in range(pt_model.num_subjects):
         pt_model.best_fits[subject] = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
 
-    pt_mean_error = pt_model.finalize_and_mean_error(error_type=error_type)
-    pt_std_deviation = pt_model.std_dev_of_error(error_type=error_type)
+    pt_mean_error     = pt_model.finalize_and_mean_error(error_type=error_type)
+    pt_std_deviation  = pt_model.std_dev_of_error(error_type=error_type)
 
     eut_model = EUTModel()
-    eut_mean_error = eut_model.finalize_and_mean_error(error_type=error_type)
+    eut_mean_error    = eut_model.finalize_and_mean_error(error_type=error_type)
     eut_std_deviation = eut_model.std_dev_of_error(error_type=error_type)
 
     # Prints

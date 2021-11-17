@@ -5,7 +5,7 @@ sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 
 ## Imports
 from EconomicDecisionMaking.models.ev_based_model import *
-from EconomicDecisionMaking.models.hpt_predictor import HPTModel
+from EconomicDecisionMaking.models.hpt_predictor  import HPTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -25,7 +25,7 @@ def main(version: str) -> None:
     ### Run fitting
     model.exhaustive_fit(precision=0.5, verbose=True)
 
-    mean_error = model.finalize_and_mean_error()
+    mean_error    = model.finalize_and_mean_error()
     std_deviation = model.std_dev_of_error()
 
     ### Prints

@@ -83,7 +83,7 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
 
 
     # Iterate through each patient, getting each best fit
-    current_row_pred = 3
+    current_row_pred  = 3
     current_row_param = 3
     for s in trange(57, desc="Saving..."):
         subject = s + 1
@@ -91,7 +91,7 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
         ## Save prediction data & best fit data
         fit = model.best_fits[s]
         paramsheet[f'A{current_row_param}'] = subject
-        predsheet[f'A{current_row_param}'] = subject
+        predsheet[f'A{current_row_param}']  = subject
 
         # Get predictions for that fit
         predictions: List[int] = model.predict_one_subject(s, fit)
@@ -121,7 +121,7 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
 
             # Save info
             predsheet.cell(row=current_row_pred, column=(day*4-1), value=int(model.data.loc[s]['stored'][d]))
-            predsheet.cell(row=current_row_pred, column=(day*4), value=int(model.data.loc[s]['price'][d]))
+            predsheet.cell(row=current_row_pred, column=(day*4),   value=int(model.data.loc[s]['price'][d]))
             predsheet.cell(row=current_row_pred, column=(day*4+1), value=int(model.data.loc[s]['sold'][d]))
             predsheet.cell(row=current_row_pred, column=(day*4+2), value=predictions[d])
 
@@ -147,5 +147,5 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
 if __name__ == '__main__':
 
     filename = "data/pt_predictions_full_iter_1029.xlsx"
-    version = "data/v2_exhaustive_iter_full_1029.pkl"
+    version  = "data/v2_exhaustive_iter_full_1029.pkl"
     spreadsheet_main(version=version, filename=filename)

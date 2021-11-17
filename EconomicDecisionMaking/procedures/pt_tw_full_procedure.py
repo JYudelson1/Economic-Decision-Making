@@ -4,7 +4,7 @@ from os.path import dirname, abspath
 sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 
 ## Imports
-import EconomicDecisionMaking.models.pt_tw_predictor as pt_tw_predictor
+import EconomicDecisionMaking.models.pt_tw_predictor    as pt_tw_predictor
 import EconomicDecisionMaking.save_model_as_spreadsheet as save_model_as_spreadsheet
 from EconomicDecisionMaking.utils import DATA_DIR
 

@@ -58,7 +58,7 @@ class EVModel(PredictionModel):
         df = pd.DataFrame(columns=range(self.num_subjects))
         for subject in range(self.num_subjects):
             best_fit = self.best_fits[subject]
-            cutoffs = self.generate_cutoffs(best_fit)
+            cutoffs  = self.generate_cutoffs(best_fit)
             for d in range(self.num_days):
                 df.loc[subject, d] = cutoffs[d]
         df.to_csv(filename, index=False)
@@ -129,7 +129,7 @@ class EVModel(PredictionModel):
             # Get stored amount, since sell amount must be less than stored
 
             stored: int = int(subject_data.loc[str(day)]["stored"])
-            price: int = int(subject_data.loc[str(day)]["price"])
+            price:  int = int(subject_data.loc[str(day)]["price"])
             max_expected_value: float = 0
             best_sell_amount: int = 0
 
@@ -154,7 +154,7 @@ class EVModel(PredictionModel):
                 # Save the best value
                 if expected_value > max_expected_value:
                     max_expected_value = expected_value
-                    best_sell_amount = sell_amount
+                    best_sell_amount   = sell_amount
             predictions.append(best_sell_amount)
 
         return predictions
