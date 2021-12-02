@@ -183,6 +183,10 @@ class PredictionModel():
         #         self.data.loc[subject, "cutoff"][day] = cutoff_prices.loc[subject][day]
         return cutoff_prices
 
+    def error_of_fit(self, subject: int, fit: Parameters) -> float:
+        predictions: List[int] = self.predict_one_subject(subject, fit)
+        return self.mean_error_one_subject_proportion(subject, predictions)
+
     def exhaustive_fit_one_subject(self,
                                 subject:    int,
                                 precision:  float,
@@ -218,8 +222,8 @@ class PredictionModel():
 
         # Iterate through every possible value
         iterations = 1
-        for range in ranges:
-            iterations *= len(range)
+        for p_range in ranges:
+            iterations *= len(p_range)
         for fit in tqdm(all_possible_fits,
                         disable=(not verbose),
                         leave=False,
@@ -532,49 +536,53 @@ class PredictionModel():
         self.best_fits[subject] = start_fit
 
         # Keep track of every visited node, along with its error
-        visited: Dict[Parameters, float] = {start_fit: start_error}
+        visited: Dict[Parameters, bool] = {}
 
         # Keep track of the current best candidate
         lowest_error: float = start_error
 
         # BFS keeps track of a queue of nodes to be visited, and checks the oldest first
-        bfs_queue: List[Parameters] = [start_fit]
-
+        bfs_queue: List[Tuple[Parameters, float]] = [(start_fit, float('inf'))]
+        print("", end="\r")
         while len(bfs_queue) != 0:
             # Get current node
-            current = bfs_queue.pop(0)
-            current_error = visited[current]
+            print(f'{len(bfs_queue)} nodes remaining / {len(visited)} visited', end="\r")
+            current, parent_error = bfs_queue.pop(0)
+
+            if visited.get(current):
+                continue
+
+            visited[current] = True
+
+            predictions = self.predict_one_subject(subject, current)
+            error = error_fn(subject, predictions)
+
+            if error > parent_error:
+                continue
+
+            if error < lowest_error:
+                lowest_error = error
+                self.best_fits[subject] = current
+                self.all_best_fits[subject] = [current]
+            elif error == lowest_error:
+                self.all_best_fits[subject].append(current)
 
             # Use itertools.product to get a list of all neighbors
             all_neighbors = list(get_all_neighbors(current, precision))
 
             # Iterate through each neighbor
-            for neighbor in tqdm(all_neighbors,
-                                 disable=(not verbose),
-                                 leave=False,
-                                 desc=f'({len(bfs_queue)} neighbors left / {len(visited)} visited)'):
+            for neighbor in all_neighbors:
 
                 # Get fit as parameter
                 neighbor_fit = Parameters(*neighbor)
                 # If fit uses a and b, a must be less than b
-                if neighbor_fit.a and neighbor_fit.b and neighbor_fit.a > neighbor_fit.b:
+                if neighbor_fit.a is not None and neighbor_fit.b is not None and neighbor_fit.a > neighbor_fit.b:
                     continue
                 # Skip visited nodes
                 if visited.get(neighbor_fit):
                     continue
                 # Get predictions and errors for each neighbor
-                predictions = self.predict_one_subject(subject, neighbor_fit)
-                neighbor_error: float = error_fn(subject, predictions)
-                # Mark down neighbor error
-                visited[neighbor_fit] = neighbor_error
-                # Add promising neighbors to queue
-                if neighbor_error < current_error:
-                    bfs_queue.append(neighbor_fit)
-                # Save best fit
-                if neighbor_error < lowest_error:
-                    lowest_error = neighbor_error
-                    self.best_fits[subject] = neighbor_fit
-                    self.all_best_fits[subject].append(neighbor_fit)
+                bfs_queue.append((neighbor_fit, error))
 
     def bfs_fit(self,
                    precision:  float = 0.001,

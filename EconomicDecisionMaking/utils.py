@@ -8,7 +8,7 @@ import numpy  as np #type: ignore
 import pickle as pkl
 from scipy.optimize import minimize, Bounds, basinhopping #type: ignore
 from math           import exp, ceil
-from typing         import Optional, Dict, List, Union, Any, Tuple, Generator, Callable, Iterable
+from typing         import Optional, Dict, List, Union, Any, Tuple, Generator, Callable, Iterable, Set
 from tqdm           import tqdm, trange #type: ignore
 from itertools      import product
 from functools      import lru_cache
@@ -148,11 +148,13 @@ def get_all_neighbors(current: Optional[Parameters], precision: float) -> Any:
         if param in params:
             current_val = getattr(current, param)
             range: List[float] = [current_val]
-            if current_val - precision >= 0.0:
+            if current_val - precision > 0.0:
                 range.append(current_val - precision)
             if current_val + precision <= 1.0:
                 range.append(current_val + precision)
             ranges.append(range)
+        else:
+            ranges.append([None])
 
     if "l" in params:
         current_val = current.l
@@ -162,6 +164,8 @@ def get_all_neighbors(current: Optional[Parameters], precision: float) -> Any:
         if current_val + precision <= 2:
             range.append(current_val + precision)
         ranges.append(range)
+    else:
+        ranges.append([None])
 
     if "tw" in params:
         current_val = current.tw
@@ -171,6 +175,8 @@ def get_all_neighbors(current: Optional[Parameters], precision: float) -> Any:
         if current_val + 1 <= NUM_DAYS - 1:
             range.append(current_val + 1)
         ranges.append(range)
+    else:
+        ranges.append([None])
 
     return product(*ranges)
 
