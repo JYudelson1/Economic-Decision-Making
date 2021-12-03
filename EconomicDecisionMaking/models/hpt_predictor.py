@@ -136,7 +136,7 @@ def TEST_check_for_pt() -> None:
     hpt_model = HPTModel()
 
     for subject in range(hpt_model.num_subjects):
-        hpt_model.best_fits[subject] = Parameters(xl=0, xg=0, g=1.0, l=1.0, tw=68)
+        hpt_model.best_fits[subject] = Parameters(xl=1.0, xg=1.0, g=1.0, l=1.0, tw=68)
 
     hpt_mean_error    = hpt_model.finalize_and_mean_error(error_type=error_type)
     hpt_std_deviation = hpt_model.std_dev_of_error(error_type=error_type)
