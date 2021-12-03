@@ -30,21 +30,36 @@ class HPTModel(EVModel):
 
     @lru_cache(maxsize=CACHE_SIZE)
     def expected_value(self, day: int, price: int, n: int, fit: Parameters, cutoffs: Tuple[int]):
-        minuend = 0.0
+        ev: float = 0
 
-        for j in range(1, price):
-            psalesj = self.get_psalesj(j, fit.tw, day, cutoffs) * p(j)
-            wp = prelec(psalesj, fit.g)
-            minuend += (wp * n * (price - j)) / (1 + (n * (price - j)) * fit.xg)
+        # First term
+        for j in range(cutoffs[day - 1], price):
+            ev += self.gain(n, price, j, fit.xg, fit.g)
 
-        subtrahend = 0.0
+        # Second term
+        lower_bound = max(price + 1, cutoffs[day - 1])
+        for j in range(lower_bound, 16):
+            ev -= self.loss(n, price, j, fit.xl, fit.l, fit.g)
 
-        for j in range(price + 1, 16):
-            psalesj = self.get_psalesj(j, fit.tw, day, cutoffs) * p(j)
-            wp = prelec(psalesj, fit.g)
-            subtrahend += (wp * fit.l * n * (j - price)) / (1 + (n * (j - price) * fit.xl))
+        # Third Term
+        bound = day + 1
+        for k in range(1, bound + 1):
+            # Term 3a
+            term_3a = self.get_term_3a(day, k - 1, cutoffs, fit.g)
 
-        ev = minuend - subtrahend
+            # Term 3b
+            term_3b = 0.0
+            for j in range(cutoffs[day - k], price):
+                term_3b += self.gain(n, price, j, fit.xg, fit.g)
+
+            # Term 3c
+            term_3c = 0.0
+            lower_bound_3c = max(price + 1, cutoffs[day - k])
+            for j in range(lower_bound, 16):
+                term_3c += self.loss(n, price, j, fit.xl, fit.l, fit.g)
+
+            ev += term_3a * (term_3b - term_3c)
+        
         return ev
 
     @lru_cache(maxsize=CACHE_SIZE)
