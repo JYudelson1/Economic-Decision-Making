@@ -5,7 +5,7 @@ sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 
 ## Imports
 from EconomicDecisionMaking.models.ev_based_model import *
-from EconomicDecisionMaking.models.eut_predictor  import EUTModel
+from EconomicDecisionMaking.models.pt_predictor  import PTModel
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -27,24 +27,79 @@ class HPTModel(EVModel):
                 ph += p(h)
             psalesj += (ph ** k)
         return psalesj
+    
+    @lru_cache(maxsize=CACHE_SIZE)
+    def gain(self, n: int, price: int, j: int, xg: float, g: float) -> float:
+        """Returns the subjective gain from selling AMOUNT goods at price PRICE rather than price J.
+        Inputs:
+            n: the amount of good to be hypothetically sold.
+            price: the current price.
+            j: a hypothetical price that might occur.
+            xg: hyperbolic gain variable, xl-.1 <= xg <= xl.
+            g: overwighting of low probabilities, 0 <= g <= 1."""
+        upper: float = n * (price - j)
+        lower: float = 1 + (n * (price -j) * xg)
+        return prelec(p(j), g) * (upper / lower)
 
     @lru_cache(maxsize=CACHE_SIZE)
+    def loss(self, n: int, price: int, j: int, xl: float, l: float, g: float) -> float:
+        """Returns the subjective loss from selling AMOUNT goods at price PRICE rather than price J.
+        Inputs:
+            n: the amount of good to be hypothetically sold.
+            price: the current price.
+            j: a hypothetical price that might occur.
+            xl: hyperbolic loss variable, 0 <= xl <= .1.
+            l: coefficient of loss sensitivity, l >= 1.
+            g: overwighting of low probabilities, 0 <= g <= 1."""
+        upper2: float = n * (j - price)
+        lower2: float = 1 + (n * (j - price) * xl)
+        return prelec(p(j), g) * l * (upper2 / lower2)
+
+    @lru_cache(maxsize=CACHE_SIZE)
+    def get_term_3a(self, day: int, k: int, cutoffs: Tuple[int], g: float):
+        """Gets a particular term from equation (6).
+        Moved to a seperate function to support caching."""
+        term_3a = 1.0
+        for h in range(1, k + 1):
+            # print(cutoffs)
+            # print(day, k, h)
+            sum_3a = 0.0
+            for j in range(1, cutoffs[day - h]):
+                sum_3a += prelec(p(j), g)
+            term_3a *= sum_3a
+        return term_3a
+    
+    @lru_cache(maxsize=CACHE_SIZE)
     def expected_value(self, day: int, price: int, n: int, fit: Parameters, cutoffs: Tuple[int]):
-        minuend = 0.0
+        ev: float = 0
 
-        for j in range(1, price):
-            psalesj = self.get_psalesj(j, fit.tw, day, cutoffs) * p(j)
-            wp = prelec(psalesj, fit.g)
-            minuend += (wp * n * (price - j)) / (1 + (n * (price - j)) * fit.xg)
+        # First term
+        for j in range(cutoffs[day - 1], price):
+            ev += self.gain(n, price, j, fit.xg, fit.g)
 
-        subtrahend = 0.0
+        # Second term
+        lower_bound = max(price + 1, cutoffs[day - 1])
+        for j in range(lower_bound, 16):
+            ev -= self.loss(n, price, j, fit.xl, fit.l, fit.g)
 
-        for j in range(price + 1, 16):
-            psalesj = self.get_psalesj(j, fit.tw, day, cutoffs) * p(j)
-            wp = prelec(psalesj, fit.g)
-            subtrahend += (wp * fit.l * n * (j - price)) / (1 + (n * (j - price) * fit.xl))
+        # Third Term
+        bound = day + 1
+        for k in range(1, bound + 1):
+            # Term 3a
+            term_3a = self.get_term_3a(day, k - 1, cutoffs, fit.g)
 
-        ev = minuend - subtrahend
+            # Term 3b
+            term_3b = 0.0
+            for j in range(cutoffs[day - k], price):
+                term_3b += self.gain(n, price, j, fit.xg, fit.g)
+
+            # Term 3c
+            term_3c = 0.0
+            lower_bound_3c = max(price + 1, cutoffs[day - k])
+            for j in range(lower_bound, 16):
+                term_3c += self.loss(n, price, j, fit.xl, fit.l, fit.g)
+
+            ev += term_3a * (term_3b - term_3c)
         return ev
 
     @lru_cache(maxsize=CACHE_SIZE)
@@ -71,9 +126,9 @@ def main(version: str) -> None:
     with open(f'{DATA_DIR}/hpt_{version}.pkl', "wb") as f:
         pkl.dump(model, f)
 
-def TEST_check_for_eut() -> None:
+def TEST_check_for_pt() -> None:
     """If HPT is coded properly, when g=l=1.0 & xl=xg=0, it should collapse
-    to the predictions of EUT. This function, when run, simply asserts that this is true."""
+    to the predictions of PT. This function, when run, simply asserts that this is true."""
     # Error type can be "absolute" or "proportional"
     error_type = "proportional"
 
@@ -86,28 +141,32 @@ def TEST_check_for_eut() -> None:
     hpt_mean_error    = hpt_model.finalize_and_mean_error(error_type=error_type)
     hpt_std_deviation = hpt_model.std_dev_of_error(error_type=error_type)
 
-    eut_model = EUTModel()
-    eut_mean_error    = eut_model.finalize_and_mean_error(error_type=error_type)
-    eut_std_deviation = eut_model.std_dev_of_error(error_type=error_type)
+    pt_model = PTModel()
+    
+    for subject in range(pt_model.num_subjects):
+        pt_model.best_fits[subject] = Parameters(a=0, b=0, g=1.0, l=1.0, tw=68)
+    
+    pt_mean_error    = pt_model.finalize_and_mean_error(error_type=error_type)
+    pt_std_deviation = pt_model.std_dev_of_error(error_type=error_type)
 
     # Prints
     print(f'hpt mean_error = {hpt_mean_error}')
     print(f'hpt std_dev = {hpt_std_deviation}')
-    print(f'eut mean_error = {eut_mean_error}')
-    print(f'eut std_dev = {eut_std_deviation}')
+    print(f'pt mean_error = {pt_mean_error}')
+    print(f'pt std_dev = {pt_std_deviation}')
 
-    eut_errors: List[float] = eut_model.mean_error_all_subjects(error_type,
+    pt_errors: List[float] = pt_model.mean_error_all_subjects(error_type,
                                                            False,
                                                            save_predictions=True)
 
     for subject in trange(hpt_model.num_subjects):
-        assert list(hpt_model.data.loc[subject]['prediction']) == list(eut_model.data.loc[subject]['prediction'])
+        assert list(hpt_model.data.loc[subject]['prediction']) == list(pt_model.data.loc[subject]['prediction'])
 
-    print("HPT is equivalent to EUT when g==l==1.0 & xl==xg==0!")
+    print("HPT is equivalent to PT when g==l==1.0 & xl==xg==0!")
 
 if __name__ == '__main__':
     ### Model name (to save to data dir)
     version = "exhaustive_0-5_930_prop"
 
-    TEST_check_for_eut()
+    TEST_check_for_pt()
     main(version=version)
