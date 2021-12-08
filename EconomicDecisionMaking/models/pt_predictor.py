@@ -6,6 +6,7 @@ sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 ## Imports
 from EconomicDecisionMaking.models.ev_based_model import *
 from EconomicDecisionMaking.models.eut_predictor  import EUTModel
+from numba import jit
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -101,21 +102,101 @@ class PTModel(EVModel):
 
         return self.expected_value(1, price, amount, fit, (1,))
 
+    def error_direction(self, subject: int, fit: Parameters) -> int:
+        predictions: List[int] = self.predict_one_subject(subject, fit)
+        data: List[int] = list(self.get_data_one_subject(subject)['sold'])
+        return sum([p-d for p,d in zip(predictions, data)])
+
+    def fit_l(self, subject: int, precision: float, a: float, b: float, g: float) -> Tuple[Parameters, float]:
+        best_fit = Parameters(a=a, b=b, g=g, l=1.0)
+        lowest_error = self.error_of_fit(subject, best_fit)
+        iterator = tqdm(np.arange(1, 3.5 + EPS, precision), desc="Fitting l", leave=False)
+        for l in iterator:
+            fit = Parameters(a=a, b=b, g=g, l=l)
+            error = self.error_of_fit(subject, fit)
+            if error < lowest_error:
+                lowest_error = error
+                best_fit = fit
+            if error == 0:
+                return (best_fit, lowest_error)
+            error_dir = self.error_direction(subject, fit)
+            if error_dir <= 0:
+                iterator.close()
+                break
+        return (best_fit, lowest_error)
+
+    def fit_a(self, subject: int, precision: float, b: float, g: float) -> Tuple[Parameters, float]:
+        best_fit, lowest_error = self.fit_l(subject, precision, a=b, b=b, g=g)
+        iterator = tqdm(np.arange(precision, b + EPS, precision)[::-1], desc="Fitting a", leave=False)
+        for a in iterator:
+            fit, error = self.fit_l(subject, precision, a=a, b=b, g=g)
+            if error < lowest_error:
+                lowest_error = error
+                best_fit = fit
+            if error == 0:
+                return (best_fit, lowest_error)
+            error_dir = self.error_direction(subject, fit)
+            #print(a, b, fit.l, error_dir)
+            if error_dir <= 0:
+                iterator.close()
+                break
+        return (best_fit, lowest_error)
+
+    def fit_b(self, subject: int, precision: float, g: float) -> Tuple[Parameters, float]:
+        best_fit, lowest_error = self.fit_a(subject, precision, b=1.0, g=g)
+        iterator = tqdm(np.arange(precision, 1 + EPS, precision)[::-1], desc="Fitting b", leave=False)
+        for b in iterator:
+            fit, error = self.fit_a(subject, precision, b=b, g=g)
+            #print(fit, error)
+            if error < lowest_error:
+                lowest_error = error
+                best_fit = fit
+            if error == 0:
+                return (best_fit, lowest_error)
+            error_dir = self.error_direction(subject, fit)
+            if error_dir >= 0:
+                iterator.close()
+                break
+        return (best_fit, lowest_error)
+
+    def optimal_fit_one_subject(self, subject: int, precision: float, verbose: bool, start_fit: Parameters) -> None:
+        lowest_error = self.error_of_fit(subject, start_fit)
+        self.best_fits[subject] = start_fit
+        for g in tqdm(np.arange(precision, 1 + EPS, precision)[::-1], desc="Fitting g", leave=False):
+            #for b in tqdm(np.arange(precision, 1 + EPS, precision)[::-1], desc="Fitting b", leave=False):
+                #for a in tqdm(np.arange(b, 1 + EPS, precision)[::-1], desc="Fitting a", leave=False):
+            fit, error = self.fit_b(subject=subject, precision=precision, g=g)
+            if error < lowest_error:
+                lowest_error = error
+                self.best_fits[subject] = fit
+            if error == 0:
+                return
+
+    def optimal_fit(self, precision: float, verbose: bool, start_fit: Parameters) -> None:
+        """Does the optimal fit algorithm for all subjects. Modifies in place.
+        Inputs:
+            precision: the amount to increment each value when iterating through all possible values.
+            verbose: set to True to get progress bars for the fitting.
+            start_fit: the first parameters to use when traversing the search space."""
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="Optimal Fit"):
+            self.optimal_fit_one_subject(subject, precision, verbose, start_fit)
+            print(subject, self.best_fits[subject], self.error_of_fit(subject, self.best_fits[subject]))
+
 def main(version: str) -> None:
 
     ### Initialize model
     model = PTModel()
 
     ### Run fitting
-    #start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
+    start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
     #model.minimize_fit(start_fit=start_fit, verbose=True, method="Nelder-Mead")
-    #model.bfs_fit(verbose=True, precision=0.05, start_fit=start_fit)
+    model.optimal_fit(verbose=True, precision=0.1, start_fit=start_fit)
     #model.greedy_fit(verbose=True, precision=0.1, start_fit=start_fit)
     #model.simulated_annealing_fit(start_fit=start_fit, verbose=True)
     #model.exhaustive_fit(precision=0.2, verbose=True)
 
-    precisions = (0.05, 0.01, 0.001)
-    model.iterative_exhaustive_search(precisions, verbose=True, start=True)
+    # precisions = (0.05, 0.01, 0.001)
+    # model.iterative_exhaustive_search(precisions, verbose=True, start=True)
 
     ### Print
     model.print_info()
@@ -157,4 +238,53 @@ if __name__ == '__main__':
     ### model name (to save to data dir)
     # version = "v2_exhaustive_iter_full_1029"
     # main(version=version)
-    TEST_check_for_eut()
+    #TEST_check_for_eut()
+    model = PTModel()
+    start_fit = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
+    # model.bfs_fit(verbose=True, precision=0.01, start_fit=start_fit)
+    model.optimal_fit(precision=0.001, verbose=True, start_fit=start_fit)
+    model.print_info()
+    # all_errors: Dict[Parameters, float] = {}
+    # subject = 0
+    # precision = .25
+    # valid_parameter_ranges = get_valid_param_ranges(precision)
+    # # Remove data on non-free params:
+    # ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in model.free_params
+    #                                                          else [None]
+    #                                                          for param in PARAM_LIST ]
+    #
+    # # Get all possible values via cartesian product
+    # all_possible_fits = product(*ranges)
+    # iterations = 1
+    # for p_range in ranges:
+    #     iterations *= len(p_range)
+    # for fit in tqdm(all_possible_fits,
+    #                 leave=False,
+    #                 total=iterations,
+    #                 desc="Attempting all fits..."):
+    #     # Skip fits where a > b
+    #     if fit[0] is not None and fit[1] is not None and fit[0] > fit[1]:
+    #         continue
+    #
+    #     # Predict sale amounts based on fit
+    #     fit_params: Parameters = Parameters(*fit)
+    #     predictions: List[int] = model.predict_one_subject(subject, fit_params)
+    #
+    #     # Get error for the given fit
+    #     error: float = model.mean_error_one_subject_proportion(subject, predictions)
+    #     all_errors[fit_params] = error
+    #
+    # for p, e in tqdm(all_errors.items()):
+    #     for d in ["a", "b", "g", "l"]:
+    #         left = p.deepcopy()
+    #         setattr(left, d, getattr(left, d) + precision)
+    #         if not all_errors.get(left):
+    #             continue
+    #         right = p.deepcopy()
+    #         setattr(right, d, getattr(right, d) - precision)
+    #         if not all_errors.get(right):
+    #             continue
+    #         if not (e <= all_errors[left] or e <= all_errors[right]):
+    #             print(p, e, d)
+    #             print(left, all_errors[left])
+    #             print(right, all_errors[right])
