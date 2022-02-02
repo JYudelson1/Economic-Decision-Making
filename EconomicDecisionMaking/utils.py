@@ -59,7 +59,7 @@ class Parameters():
 
     def __repr__(self):
         """String representation of Parameter object"""
-        return f'Parameters(a={self.a},b={self.b},xg={self.xg},xl={self.xl},g={self.g},l={self.l},tw={self.tw})'
+        return f'Parameters(a={self.a},b={self.b},xg={self.xg},xl={self.xl},g={self.g},l={self.l:.3f},tw={self.tw})'
 
     def __hash__(self):
         """Make Parameters hashable, and allow identical params to hash to same locations"""
