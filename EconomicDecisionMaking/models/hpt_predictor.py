@@ -27,7 +27,7 @@ class HPTModel(EVModel):
                 ph += p(h)
             psalesj += (ph ** k)
         return psalesj
-    
+
     @lru_cache(maxsize=CACHE_SIZE)
     def gain(self, n: int, price: int, j: int, xg: float, g: float) -> float:
         """Returns the subjective gain from selling AMOUNT goods at price PRICE rather than price J.
@@ -68,7 +68,7 @@ class HPTModel(EVModel):
                 sum_3a += prelec(p(j), g)
             term_3a *= sum_3a
         return term_3a
-    
+
     @lru_cache(maxsize=CACHE_SIZE)
     def expected_value(self, day: int, price: int, n: int, fit: Parameters, cutoffs: Tuple[int]):
         ev: float = 0
@@ -136,16 +136,16 @@ def TEST_check_for_pt() -> None:
     hpt_model = HPTModel()
 
     for subject in range(hpt_model.num_subjects):
-        hpt_model.best_fits[subject] = Parameters(xl=1.0, xg=1.0, g=1.0, l=1.0, tw=68)
+        hpt_model.best_fits[subject] = Parameters(xl=1.0, xg=1.0, g=1.0, l=1.0)
 
     hpt_mean_error    = hpt_model.finalize_and_mean_error(error_type=error_type)
     hpt_std_deviation = hpt_model.std_dev_of_error(error_type=error_type)
 
     pt_model = PTModel()
-    
+
     for subject in range(pt_model.num_subjects):
         pt_model.best_fits[subject] = Parameters(a=0, b=0, g=1.0, l=1.0, tw=68)
-    
+
     pt_mean_error    = pt_model.finalize_and_mean_error(error_type=error_type)
     pt_std_deviation = pt_model.std_dev_of_error(error_type=error_type)
 
