@@ -143,9 +143,3 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
     #     errorsheet.column_dimensions[col[0].column_letter].width = length
 
     workbook.save(filename=filename)
-
-if __name__ == '__main__':
-
-    filename = "data/pt_predictions_full_iter_1029.xlsx"
-    version  = "data/v2_exhaustive_iter_full_1029.pkl"
-    spreadsheet_main(version=version, filename=filename)
