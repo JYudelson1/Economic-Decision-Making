@@ -5,3 +5,4 @@ EconomicDecisionMaking/data/*.xlsx
 .DS_Store
 EconomicDecisionMaking/*/.DS_Store
 EconomicDecisionMaking/.DS_Store
+.idea/
