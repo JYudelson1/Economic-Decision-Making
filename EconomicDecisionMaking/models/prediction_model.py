@@ -450,17 +450,19 @@ class PredictionModel():
         predictions: List[int]  = self.predict_one_subject(subject, start_fit)
         current_error: float    = error_fn(subject, predictions)
 
-        # Changed flag will tell us whether the best fit changes over the course
-        # of one iteration of the algorithm. If it doesn't change, then we are
-        # in a local minimum and can stop.
-        changed: bool = True
+        # Frontier contains the points to be visited
+        frontier = {start_fit}
+        visited = {start_fit: current_error}
 
-        while changed:
-            # Reset changed flag
-            changed = False
+        while frontier:
 
             # Use itertools.product to get a list of all naighbors
-            all_neighbors = list(get_all_neighbors(self.best_fits[subject], precision))
+            current = frontier.pop()
+            new_error = visited[current]
+            if new_error < current_error:
+                continue
+
+            all_neighbors = list(get_all_neighbors(current, precision))
 
             # Iterate through each neighbor
             for neighbor in tqdm(all_neighbors,
@@ -472,17 +474,24 @@ class PredictionModel():
                 # If fit uses a and b, a must be less than b
                 if neighbor_fit.a and neighbor_fit.b and neighbor_fit.a > neighbor_fit.b:
                     continue
+                if visited.get(neighbor_fit) is not None:
+                    continue
                 # Get predictions and errors for each neighbor
                 predictions = self.predict_one_subject(subject, neighbor_fit)
                 neighbor_error: float = error_fn(subject, predictions)
+                visited[neighbor_fit] = neighbor_error
                 # Save best neighbor error
-                if neighbor_error < current_error:
+                if neighbor_error <= current_error:
                     # Local save and modify in plave
-                    current_error = neighbor_error
-                    self.best_fits[subject] = neighbor_fit
+                    if neighbor_error < current_error:
+                        current_error = neighbor_error
+                        self.best_fits[subject] = neighbor_fit
+                        self.all_best_fits[subject] = []
                     self.all_best_fits[subject].append(neighbor_fit)
-                    # Set changed flag
-                    changed = True
+                    frontier.add(neighbor_fit)
+                    if neighbor_error == 0:
+                        return
+
 
     def greedy_fit(self,
                    precision:  float = 0.001,
@@ -500,6 +509,7 @@ class PredictionModel():
             start_fit: the first parameters to use when traversing the search space."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc="Greedy Fit"):
             self.greedy_fit_one_subject(subject, precision, verbose, error_type, start_fit)
+            print(subject, self.error_of_fit(subject, self.best_fits[subject]), self.best_fits[subject])
 
     def bfs_fit_one_subject(self,
                                subject:    int,
