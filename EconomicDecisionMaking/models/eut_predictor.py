@@ -25,6 +25,11 @@ class EUTModel(PredictionModel):
 
         # Return the prediction that the subject will sell all units when the price is above the cutoff price
         predictions: List[int] = np.where(subject_data['price'] >= self.cutoff_prices.loc[0], subject_data['stored'], 0)
+        
+        # Generates error for each participant 
+        error_per_participant = {} 
+        error_per_participant[subject] = self.mean_error_one_subject_proportion(subject, predictions)
+        print(error_per_participant)
 
         return predictions
 
@@ -33,7 +38,16 @@ if __name__ == '__main__':
     ### Initialize model
     model = EUTModel()
 
+    
     ### Finalizes predictions
+
+    # This generates error for each participant (The output was copied and pasted in an excel)
+    mean_error = model.finalize_and_mean_error(error_type="proportional")
+
+    # This generates error overall beteen all participants
     mean_error = model.finalize_and_mean_error()
     print(f'mean_error = {mean_error}')
+
+    # This generates stored, sold, price, and prediction by participant and day. 2nd line outputs to csv
     print(model.data)
+    #model.data.to_csv('eut.csv')
