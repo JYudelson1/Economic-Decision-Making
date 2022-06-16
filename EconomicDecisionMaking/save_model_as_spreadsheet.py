@@ -29,7 +29,7 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
 
     # Load model
     with open(version, "rb") as f:
-        model = pkl.load(f)
+        model = pd.read_pickle(f)
 
     workbook = Workbook()
 
@@ -90,8 +90,9 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
 
         ## Save prediction data & best fit data
         fit = model.best_fits[s]
+
         paramsheet[f'A{current_row_param}'] = subject
-        predsheet[f'A{current_row_param}']  = subject
+        predsheet[f'A{current_row_pred}']   = subject
 
         # Get predictions for that fit
         predictions: List[int] = model.predict_one_subject(s, fit)
@@ -102,15 +103,20 @@ def spreadsheet_main(version: str, filename: str, use_all_fits: bool = True) -> 
         paramsheet.cell(row=current_row_param, column=err_col, value=round(error, 3))
 
         if use_all_fits:
-            all_fits = model.all_best_fits[s]
+            all_fits = sorted(model.all_best_fits[s], key=lambda fit: fit.tw, reverse=True)
             for good_fit in all_fits:
+                # Add tw when not explicit
+                if 'tw' in model.free_params and good_fit.tw is None:
+                    good_fit.tw = 68
                 # save only the free params
-                for i, param in enumerate(good_fit.free_params):
+                for i, param in enumerate(model.free_params):
                     # Rounding just to remove floating point error
                     paramsheet[current_row_param][i+1].value = str(round(getattr(good_fit,param), 3))
                 current_row_param += 1
         else:
-            for i, param in enumerate(fit.free_params):
+            if 'tw' in model.free_params and fit.tw is None:
+                fit.tw = 68
+            for i, param in enumerate(model.free_params):
                 # Rounding just to remove floating point error
                 paramsheet[current_row_param][i+1].value = str(round(getattr(fit,param), 3))
             current_row_param += 1
