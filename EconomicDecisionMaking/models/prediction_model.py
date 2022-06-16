@@ -1,7 +1,7 @@
 ## Adding package to PATH
-import sys
-from os.path import dirname, abspath
-sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
+# import sys
+# from os.path import dirname, abspath
+# sys.path.append(dirname(dirname(dirname(abspath(__file__)))))
 
 ## Imports
 from EconomicDecisionMaking.utils import *
@@ -191,7 +191,8 @@ class PredictionModel():
                                 subject:    int,
                                 precision:  float,
                                 verbose:    bool = False,
-                                error_type: str = "proportional") -> None:
+                                error_type: str = "proportional",
+                                tw:         Optional[int] = None) -> None:
         """Performs the exhaustive fit algorithm for one subject and saves the best fit.
         The exhaustive fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
         Inputs:
@@ -201,7 +202,8 @@ class PredictionModel():
             error_type: should the error be calculated as the absolute difference
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
-                        seems to use proportional."""
+                        seems to use proportional.
+            tw: if provided, tw will stay at this constant level."""
 
         lowest_error: float  = float('inf')
         best_fit: Parameters = Parameters(1, 1, 1, 1, 68)
@@ -211,6 +213,8 @@ class PredictionModel():
 
         # Get lists of all possible values for all free params
         valid_parameter_ranges: Dict[str, List[float]] = get_valid_param_ranges(precision)
+        if tw is not None:
+            valid_parameter_ranges["tw"] = [tw]
 
         # Remove data on non-free params:
         ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params
@@ -257,7 +261,7 @@ class PredictionModel():
 
         self.best_fits[subject] = best_fit
 
-    def exhaustive_fit(self, precision: float = 0.001, verbose: bool = False, error_type: str = "proportional") -> None:
+    def exhaustive_fit(self, precision: float = 0.001, verbose: bool = False, error_type: str = "proportional", tw: Optional[int] = None) -> None:
         """Does the exhaustive fit algorithm for all subjects. Modifies in place.
         Inputs:
             precision: the amount to increment each value when iterating through all possible values.
@@ -265,16 +269,18 @@ class PredictionModel():
             error_type: should the error be calculated as the absolute difference
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
-                        seems to use proportional."""
+                        seems to use proportional.
+            tw: if provided, tw will stay at this constant level."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc="Exhaustive Fit"):
-            self.exhaustive_fit_one_subject(subject, precision, verbose, error_type)
+            self.exhaustive_fit_one_subject(subject, precision, verbose, error_type, tw=tw)
 
     def exhaustive_fit_with_guess_one_subject(self,
                                 subject:        int,
                                 precision:      float,
                                 prev_precision: float,
                                 verbose:        bool = False,
-                                error_type:     str = "proportional") -> None:
+                                error_type:     str = "proportional",
+                                tw:             Optional[int] = None) -> None:
         """Performs the exhaustive fit algorithm for one subject and saves the best fit.
         The exhaustive fit algorithm consists of iterating through all possible parameter values (with a given level of precision) and accepting the best.
         Inputs:
@@ -284,7 +290,8 @@ class PredictionModel():
             error_type: should the error be calculated as the absolute difference
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
-                        seems to use proportional."""
+                        seems to use proportional.
+            tw: if provided, tw will stay at this constant level."""
 
         prev_best_fit: Parameters = self.best_fits[subject]
         initial_pred = self.predict_one_subject(subject=subject, fit=prev_best_fit)
@@ -330,6 +337,8 @@ class PredictionModel():
                 )),
             "tw": list(np.arange(2, NUM_DAYS, 1))
         }
+        if tw is not None:
+            valid_parameter_ranges["tw"] = [tw]
 
         # Remove data on non-free params:
         ranges: List[List[Any]] = [valid_parameter_ranges[param] if param in self.free_params
@@ -376,7 +385,12 @@ class PredictionModel():
 
         self.best_fits[subject] = best_fit
 
-    def exhaustive_fit_with_guess(self, precision: float, prev_precision: float, verbose: bool = False, error_type: str = "proportional") -> None:
+    def exhaustive_fit_with_guess(self,
+                                  precision: float,
+                                  prev_precision: float,
+                                  verbose: bool = False,
+                                  error_type: str = "proportional",
+                                  tw: Optional[int] = None) -> None:
         """Does the exhaustive fit algorithm for all subjects. Modifies in place.
         Use case is after exhaustive fit, to hone in on the previous best guess.
         Inputs:
@@ -386,11 +400,53 @@ class PredictionModel():
             error_type: should the error be calculated as the absolute difference
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
-                        seems to use proportional."""
+                        seems to use proportional.
+            tw: if provided, tw will stay at this constant level."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc=f'Exhaustive Fit (p={precision})'):
-            self.exhaustive_fit_with_guess_one_subject(subject, precision, prev_precision, verbose, error_type)
+            self.exhaustive_fit_with_guess_one_subject(subject, precision, prev_precision, verbose, error_type, tw=tw)
 
-    def iterative_exhaustive_search(self, precisions: Tuple[float, ...], verbose: bool = False, error_type: str = "proportional", start=True) -> None:
+    def iterative_exhaustive_search_one_subject(self,
+                                                subject:    int,
+                                                precisions: Tuple[float, ...],
+                                                verbose:    bool = False,
+                                                error_type: str = "proportional",
+                                                start:      bool = True,
+                                                tw:         Optional[int] = None) -> None:
+        """Does the iterative exhaustive fit algorithm for all subjects. Modifies in place.
+        Successively hones in on smaller regions of the search space.
+        Inputs:
+            subject: the participant's number in the dataframe.
+            precisions: A decreasing list of precision values
+            verbose: set to True to get progress bars for the fitting.
+            error_type: should the error be calculated as the absolute difference
+                        between the prediction and the amount, or as
+                        the difference in proportion of goods sold. report.docx
+                        seems to use proportional.
+            start: if True, also run first exhaustive fit with first precision value.
+            tw: if provided, tw will stay at this constant level."""
+        if start:
+            self.exhaustive_fit_one_subject(subject=subject, precision=precisions[0],
+                                                             verbose=verbose, error_type=error_type,
+                                                             tw=tw)
+            # store predictions in self.data
+            predictions: List[int] = self.predict_one_subject(subject, self.best_fits[subject])
+            self.data.loc[subject, "prediction"] = predictions
+
+        for i in range(len(precisions) - 1):
+            self.exhaustive_fit_with_guess_one_subject(subject=subject, precision=precisions[i+1],
+                                                                        prev_precision=precisions[i],
+                                                                        verbose=verbose, error_type=error_type,
+                                                                        tw=tw)
+            # store predictions in self.data
+            predictions: List[int] = self.predict_one_subject(subject, self.best_fits[subject])
+            self.data.loc[subject, "prediction"] = predictions
+
+    def iterative_exhaustive_search(self,
+                                    precisions: Tuple[float, ...],
+                                    verbose: bool     = False,
+                                    error_type: str   = "proportional",
+                                    start: bool       = True,
+                                    tw: Optional[int] = None) -> None:
         """Does the iterative exhaustive fit algorithm for all subjects. Modifies in place.
         Successively hones in on smaller regions of the search space.
         Inputs:
@@ -400,16 +456,21 @@ class PredictionModel():
                         between the prediction and the amount, or as
                         the difference in proportion of goods sold. report.docx
                         seems to use proportional.
-            start: if True, also run first exhaustive fit with first precision value."""
+            start: if True, also run first exhaustive fit with first precision value.
+            tw: if provided, tw will stay at this constant level."""
         if start:
-            self.exhaustive_fit(precision=precisions[0], verbose=True, error_type=error_type)
+            self.exhaustive_fit(precision=precisions[0], verbose=True, error_type=error_type, tw=tw)
             if verbose:
                 self.print_info()
             else:
                 self.mean_error_all_subjects(error_type, False, save_predictions=True)
 
         for i in range(len(precisions) - 1):
-            self.exhaustive_fit_with_guess(precision=precisions[i+1], prev_precision=precisions[i], verbose=True, error_type=error_type)
+            self.exhaustive_fit_with_guess(precision=precisions[i+1],
+                                           prev_precision=precisions[i],
+                                           verbose=True,
+                                           error_type=error_type,
+                                           tw=tw)
             if verbose:
                 self.print_info()
             else:
@@ -785,3 +846,45 @@ class PredictionModel():
             start_fit: the first parameters to use when traversing the search space."""
         for subject in trange(self.num_subjects, disable=(not verbose), desc=f'Basinhopping Fit'):
             self.simulated_annealing_fit_one_subject(subject, start_fit, error_type)
+
+    def smart_tw_fit(self, fit_one_fn: Callable, **kwargs: Dict[Any, Any]) -> None:
+        skip_this_subject = {i: False for i in range(57)}
+
+        for tw in trange(67, 0, -1, desc='descending through tws', leave=True):
+            # Make sure the right tw will be used
+            if kwargs.get("start_fit"):
+                kwargs['start_fit'].tw = tw
+            else:
+                kwargs['tw'] = tw
+
+            # Iterate through each subject
+            for subject in trange(57, desc=f'Fitting at tw={tw}', leave=False):
+                # Skip the properly fitted ones
+                if self.lowest_errors[subject] == 0:
+                    continue
+                if skip_this_subject[subject]:
+                    continue
+
+                # Save older values for comparison
+                prev_lowest_error = self.lowest_errors[subject]
+                prev_best_fit = self.best_fits[subject]
+
+                # Do the fitting!
+                fit_one_fn(subject=subject, **kwargs)
+
+                # Compare to old values
+                new_error = self.error_of_fit(subject, self.best_fits[subject])
+                if prev_lowest_error < new_error: #If error goes up
+                    self.best_fits[subject] = prev_best_fit
+                    skip_this_subject[subject] = True
+                else: #If tw=tw fits aren't of the same or lesser error as tw=tw+1
+                    no_new_fits = True
+                    for fit in self.all_best_fits[subject]:
+                        if fit.tw == tw:
+                            no_new_fits = False
+                            break
+                    if self.best_fits[subject].tw == tw: no_new_fits = False
+                    if no_new_fits:
+                        skip_this_subject[subject] = True
+                if skip_this_subject[subject]:
+                    print(f'subject {subject} has stopped at tw={tw}')

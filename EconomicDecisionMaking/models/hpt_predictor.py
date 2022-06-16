@@ -13,7 +13,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 class HPTModel(EVModel):
     """This model implements the predictions of Prospect Theory, with Arnold Glass's Time Window"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.free_params: list[str] = ["xg", "xl", "g", "l"]
 
@@ -106,13 +106,82 @@ class HPTModel(EVModel):
     def expected_value_day_2(self, price: int, n: int, fit: Parameters, cutoffs: Tuple[int]):
         return self.expected_value(1, price, n, fit, (1,))
 
+    def linear_fit_one_subject(self, subject: int, precision: float, verbose: bool, start_fit: Parameters, i: int) -> None:
+        lowest_error = self.error_of_fit(subject, start_fit)
+        self.best_fits[subject] = start_fit
+        iter_xl = tqdm(np.arange(precision, 1 + EPS, precision)[::-1], desc=f'Fitting xl (i={i})', leave=False)
+        for xl in iter_xl:
+            fit = self.best_fits[subject].deepcopy()
+            fit.xl = xl
+            fit.xg = xl
+            error = self.error_of_fit(subject, fit)
+            if error < lowest_error:
+                lowest_error = error
+                self.best_fits[subject] = fit
+            if error == 0:
+                iter_xl.close()
+                return
+        iter_xg = tqdm(np.arange(max(precision, self.best_fits[subject].xl - .1), min(1 + EPS, self.best_fits[subject].xl), precision)[::-1], desc=f'Fitting xg (i={i})', leave=False)
+        for xg in iter_xg:
+            fit = self.best_fits[subject].deepcopy()
+            fit.xg = xg
+            error = self.error_of_fit(subject, fit)
+            if error < lowest_error:
+                lowest_error = error
+                self.best_fits[subject] = fit
+            if error == 0:
+                iter_xg.close()
+                return
+        iter_l = tqdm(np.arange(1, 3.5 + EPS, precision), desc=f'Fitting l (i={i})', leave=False)
+        for l in iter_l:
+            fit = self.best_fits[subject].deepcopy()
+            fit.l = l
+            error = self.error_of_fit(subject, fit)
+            if error <= lowest_error:
+                lowest_error = error
+                self.best_fits[subject] = fit
+            if error == 0:
+                iter_l.close()
+                return
+        iter_g = tqdm(np.arange(precision, 1 + EPS, precision)[::-1], desc=f'Fitting g (i={i})', leave=False)
+        for g in iter_g:
+            fit = self.best_fits[subject].deepcopy()
+            fit.g = g
+            error = self.error_of_fit(subject, fit)
+            if error < lowest_error:
+                lowest_error = error
+                self.best_fits[subject] = fit
+            if error == 0:
+                iter_g.close()
+                return
+
+    def recursive_linear_fit_one_subject(self, subject: int, precision: float, verbose: bool, start_fit: Parameters):
+        i = 1
+        lowest_error = self.error_of_fit(subject, start_fit)
+        self.linear_fit_one_subject(subject, precision, verbose, start_fit, i)
+        new_error = self.error_of_fit(subject, self.best_fits[subject])
+
+        while new_error < lowest_error and new_error > 0:
+            i += 1
+            lowest_error = new_error
+            self.linear_fit_one_subject(subject, precision, verbose, self.best_fits[subject], i)
+            new_error = self.error_of_fit(subject, self.best_fits[subject])
+
+    def linear_fit(self, precision: float, verbose: bool, start_fit: Parameters) -> None:
+        for subject in trange(self.num_subjects, disable=(not verbose), desc="Linear Fit"):
+            self.recursive_linear_fit_one_subject(subject, precision, verbose, start_fit)
+            if verbose:
+                print(subject, self.best_fits[subject], self.error_of_fit(subject, self.best_fits[subject]))
+
 def main(version: str) -> None:
 
     ### Initialize model
     model = HPTModel()
 
     ### Run fitting
-    model.exhaustive_fit(precision=0.5, verbose=True)
+    # precisions = (0.05, 0.01, 0.001)
+    # model.iterative_exhaustive_search(precisions, verbose=True, start=True)
+    model.linear_fit(0.001, True, Parameters(xl=0, xg=0, g=1.0, l=1.0))
 
     mean_error    = model.finalize_and_mean_error()
     std_deviation = model.std_dev_of_error()
@@ -136,7 +205,7 @@ def TEST_check_for_pt() -> None:
     hpt_model = HPTModel()
 
     for subject in range(hpt_model.num_subjects):
-        hpt_model.best_fits[subject] = Parameters(xl=1.0, xg=1.0, g=1.0, l=1.0)
+        hpt_model.best_fits[subject] = Parameters(xl=0, xg=0, g=1.0, l=1.0)
 
     hpt_mean_error    = hpt_model.finalize_and_mean_error(error_type=error_type)
     hpt_std_deviation = hpt_model.std_dev_of_error(error_type=error_type)
@@ -144,7 +213,7 @@ def TEST_check_for_pt() -> None:
     pt_model = PTModel()
 
     for subject in range(pt_model.num_subjects):
-        pt_model.best_fits[subject] = Parameters(a=0, b=0, g=1.0, l=1.0, tw=68)
+        pt_model.best_fits[subject] = Parameters(a=1.0, b=1.0, g=1.0, l=1.0)
 
     pt_mean_error    = pt_model.finalize_and_mean_error(error_type=error_type)
     pt_std_deviation = pt_model.std_dev_of_error(error_type=error_type)
@@ -166,7 +235,7 @@ def TEST_check_for_pt() -> None:
 
 if __name__ == '__main__':
     ### Model name (to save to data dir)
-    version = "exhaustive_0-5_930_prop"
+    version = "linear_fit_0-001_420"
 
-    TEST_check_for_pt()
+    #TEST_check_for_pt()
     main(version=version)

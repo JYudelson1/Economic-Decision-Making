@@ -3,8 +3,8 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ## Imports
-import pandas as pd #type: ignore
-import numpy  as np #type: ignore
+import pandas as pd
+import numpy  as np
 import pickle as pkl
 import random
 from scipy.optimize import minimize, Bounds, basinhopping #type: ignore
@@ -31,13 +31,13 @@ class Parameters():
 
     __slots__ = ['a', 'b', 'xg', 'xl', 'g', 'l', 'tw', 'free_params']
 
-    def __init__(self, a   = None,
+    def __init__(self,  a  = None,
                         b  = None,
                         xg = None,
                         xl = None,
                         g  = None,
                         l  = None,
-                        tw = None):
+                        tw = None) -> None:
         self.a:  float = a
         self.b:  float = b
         self.xl: float = xl
@@ -50,7 +50,7 @@ class Parameters():
         self.free_params: List[str] = [param for param in PARAM_LIST
                                                     if getattr(self, param) != None]
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Check if two Parameter objects store equivalent info"""
         if not isinstance(other, Parameters):
             return False
@@ -59,7 +59,7 @@ class Parameters():
                 return False
         return True
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of Parameter object"""
         return f'Parameters(a={self.a},b={self.b},xg={self.xg},xl={self.xl},g={self.g},l={self.l:.3f},tw={self.tw})'
 
@@ -67,11 +67,11 @@ class Parameters():
         """Make Parameters hashable, and allow identical params to hash to same locations"""
         return (self.a, self.b, self.xg, self.xl, self.g, self.l, self.tw).__hash__()
 
-    def tuplify(self):
+    def tuplify(self) -> Tuple:
         """Return all info as a tuple"""
         return (self.a, self.b, self.xg, self.xl, self.g, self.l, self.tw)
 
-    def deepcopy(self):
+    def deepcopy(self) -> "Parameters":
         """Returns a deepcopied Parameters object with the same values as self"""
         return Parameters(*self.tuplify())
 
@@ -120,8 +120,8 @@ def get_valid_param_ranges(precision: float = 0.001) -> Dict[str, List[float]]:
     Inputs:
         precision: the amount to increment each value when iterating through all possible values."""
     valid_parameter_ranges: Dict[str, List[float]] = {
-        "a":  list(np.arange(precision, 1 + EPS, precision)),
-        "b":  list(np.arange(precision, 1 + EPS, precision)),
+        "a":  list(np.arange(0.85, 1 + EPS, precision)),
+        "b":  list(np.arange(0.85, 1 + EPS, precision)),
         "xg": list(np.arange(precision, 1 + EPS, precision)),
         "xl": list(np.arange(precision, 1 + EPS, precision)),
         "g":  list(np.arange(precision, 1 + EPS, precision)),
@@ -191,7 +191,7 @@ def p(price: int) -> float:
     NOTE: This uses the normalized integer price, i.e. $1.5 -> 15
     Inputs:
         price: price as an int"""
-    return prices_probabilities.loc[price - 1]["probability"]
+    return float(prices_probabilities.loc[price - 1]["probability"])
 
 @lru_cache(maxsize=CACHE_SIZE)
 def prelec(p: float, g: float) -> float:
