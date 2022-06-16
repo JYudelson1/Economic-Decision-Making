@@ -6,3 +6,4 @@ EconomicDecisionMaking/data/*.xlsx
 EconomicDecisionMaking/*/.DS_Store
 EconomicDecisionMaking/.DS_Store
 .idea/
+.mypy_cache/
